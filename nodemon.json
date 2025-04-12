@@ -1,0 +1,13 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.test.ts", "dist/", "node_modules/", "tests/"],
+  "exec": "NODE_ENV=development ts-node --esm src/server.ts",
+  "restartable": "rs",
+  "delay": 500,
+  "env": {
+    "NODE_ENV": "development",
+    "PORT": 3000
+  }
+}
+
