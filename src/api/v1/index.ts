@@ -1,14 +1,23 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { logger } from 'hono/logger';
+import { timing } from 'hono/timing';
+import { prettyJSON } from 'hono/pretty-json';
 
 // Import route modules from the routes directory
-import { healthRouter } from '@/api/v1/health';
+import { mountRoutes, routeGroups } from '@/api/v1/routes';
+import { config } from '@/config';
 
 /**
  * V1 API Router
  * Handles all v1 API routes and provides consistent error handling
  */
 export const v1Router = new Hono();
+
+// Apply global middleware
+v1Router.use('*', logger());
+v1Router.use('*', timing());
+v1Router.use('*', prettyJSON({ space: 2 }));
 
 /**
  * @route GET /api/v1
@@ -17,18 +26,21 @@ export const v1Router = new Hono();
  */
 v1Router.get('/', c => {
   return c.json({
+    name: 'Turbomode API',
     version: 'v1',
     status: 'active',
+    environment: config.server.environment,
     documentation: '/api/v1/docs',
+    timestamp: new Date().toISOString(),
+    routes: routeGroups.map(group => ({
+      path: `/api/v1${group.path}`,
+      description: group.description
+    }))
   });
 });
 
-// Mount route groups
-v1Router.route('/health', healthRouter);
-
-// Mount additional route groups as they are created
-// v1Router.route('/users', userRouter);
-// v1Router.route('/auth', authRouter);
+// Mount all route groups dynamically
+mountRoutes(v1Router);
 
 // Add global error handler for v1 routes
 v1Router.onError((err, c) => {

@@ -41,4 +41,3 @@ export async function initPrisma(): Promise<void> {
     process.exit(1);
   }
 }
-

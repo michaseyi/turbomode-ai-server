@@ -1,3 +1,5 @@
+import { ContentfulStatusCode } from 'hono/utils/http-status';
+
 /**
  * Base API response interface
  */
@@ -43,16 +45,25 @@ export type SortDirection = 'asc' | 'desc';
  */
 export interface ApiError {
   message: string;
-  status: number;
+  status: ContentfulStatusCode;
   details?: Record<string, string[]>;
 }
 
 /**
  * Service result interface for consistent returns
  */
-export interface ServiceResult<T> {
-  success: boolean;
-  data?: T;
-  error?: ApiError;
-}
+// export interface ServiceResult<T> {
+//   success: boolean;
+//   data?: T;
+//   error?: ApiError;
+// }
 
+export type ServiceResult<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: ApiError;
+    };

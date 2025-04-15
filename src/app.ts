@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
-import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
-import { v1Router } from '@/api/v1';
-import { initPrisma, disconnectPrisma } from '@/services';
+import { prettyJSON } from 'hono/pretty-json';
+import { v1Router } from '@/api/v1/index.js';
+import { initPrisma, disconnectPrisma } from '@/services/index.js';
+import { requestLogger, logger } from '@/middlewares/logger.js';
+import { errorMiddleware, notFoundMiddleware } from '@/middlewares/error.js';
 
 // Create Hono app instance
 const app = new Hono();

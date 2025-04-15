@@ -2,8 +2,6 @@ import { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status';
 
-import {} from '@/app.js';
-
 /**
  * Base controller class with common response methods
  * All controllers should extend this class for consistent response handling
