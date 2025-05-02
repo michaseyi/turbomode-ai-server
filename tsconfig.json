@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "emitDeclarationOnly": false,
@@ -27,6 +27,10 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "lib": ["ESNext"]
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

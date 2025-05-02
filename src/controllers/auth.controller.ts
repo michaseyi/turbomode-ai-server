@@ -5,13 +5,12 @@
  */
 
 import { Context } from 'hono';
-import { BaseController } from '@/controllers';
+import { BaseController } from '@/controllers/base.controller';
 import { authService } from '@/services/auth.service';
 import { LoginCredentials, RegisterData, GoogleProfile } from '@/types/auth';
 import { authConfig } from '@/config/auth';
 import { AUTH, ERROR_MESSAGES, VALIDATION } from '@/config/constants';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { authValidation } from '@/validation/user';
 
 /**
  * Authentication Controller

@@ -1,14 +1,7 @@
-/**
- * Authentication Routes
- *
- * Defines routes for user authentication, including local and OAuth strategies.
- */
-
 import { Hono } from 'hono';
-import { authController } from '@/controllers/auth.controller';
+import { authController } from '@/controllers';
 import { authMiddleware } from '@/middlewares/auth';
 
-// Create a router for auth-related endpoints
 const authRouter = new Hono();
 
 /**
@@ -37,18 +30,14 @@ authRouter.post('/refresh', authController.refreshToken);
  * @description Logout user and invalidate tokens
  * @access Private
  */
-authRouter.post('/logout', authMiddleware, authController.logout);
+authRouter.post('/logout', authMiddleware.ensureAuthenticated, authController.logout);
 
 /**
  * @route GET /auth/me
  * @description Get current authenticated user
  * @access Private
  */
-authRouter.get('/me', authMiddleware, authController.getCurrentUser);
-
-/**
- * Google OAuth Routes
- */
+authRouter.get('/me', authMiddleware.ensureAuthenticated, authController.getCurrentUser);
 
 /**
  * @route GET /auth/google

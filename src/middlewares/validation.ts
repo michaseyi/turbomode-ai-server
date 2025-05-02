@@ -1,7 +1,7 @@
 import { Context, Next, MiddlewareHandler } from 'hono';
 import { ERROR_MESSAGES } from '@/config/constants.js';
 import z from 'zod';
-import { BaseController } from '@/controllers';
+import { BaseController } from '@/controllers/base.controller';
 
 export class ValidationMiddleware extends BaseController {
   validateRequest<BodyT, ParamT, QueryT>({
@@ -24,7 +24,6 @@ export class ValidationMiddleware extends BaseController {
           const result = body.safeParse(reqBody);
 
           if (!result.success) {
-            // Map Zod errors to a more readable format
             result.error.errors.forEach(error => {
               const field = error.path[0] || 'body';
               if (!errors[field]) {
@@ -35,7 +34,6 @@ export class ValidationMiddleware extends BaseController {
 
             hasErrors = true;
           } else {
-            // Set validated body for handler access
             c.set('body', result.data);
           }
         } catch (error) {
@@ -44,12 +42,10 @@ export class ValidationMiddleware extends BaseController {
         }
       }
 
-      // Validate URL parameters if schema provided
       if (params) {
         const urlParams = c.req.param();
         const result = params.safeParse(urlParams);
         if (!result.success) {
-          // Map Zod errors to a more readable format
           result.error.errors.forEach(error => {
             const field = error.path[0] || 'params';
             if (!errors[field]) {
@@ -63,12 +59,11 @@ export class ValidationMiddleware extends BaseController {
           c.set('params', result.data);
         }
       }
-      // Validate query parameters if schema provided
+
       if (query) {
         const queryParams = c.req.query();
         const result = query.safeParse(queryParams);
         if (!result.success) {
-          // Map Zod errors to a more readable format
           result.error.errors.forEach(error => {
             const field = error.path[0] || 'query';
             if (!errors[field]) {
@@ -82,11 +77,10 @@ export class ValidationMiddleware extends BaseController {
           c.set('query', result.data);
         }
       }
-      // Return validation errors if any
+
       if (hasErrors) {
         return this.sendError(c, ERROR_MESSAGES.SERVER.BAD_REQUEST, 400, errors);
       }
-      // Continue to the route handler
       return await next();
     };
   }

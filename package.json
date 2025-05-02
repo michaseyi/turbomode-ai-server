@@ -1,16 +1,15 @@
 {
   "name": "turbomode-ai-server",
   "version": "1.0.0",
-  "description": "A modern Node.js TypeScript server application",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "NODE_ENV=development ts-node --esm src/server.ts",
+    "start": "node dist/index.js",
+    "dev": "NODE_ENV=development tsx src/index.ts",
     "dev:watch": "nodemon",
-    "start:dev": "NODE_ENV=development ts-node --esm src/server.ts",
-    "start:prod": "NODE_ENV=production node dist/server.js",
+    "start:dev": "NODE_ENV=development tsx src/index.ts",
+    "start:prod": "NODE_ENV=production node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "test": "vitest",
@@ -29,7 +28,7 @@
     "node",
     "server"
   ],
-  "author": "Your Name",
+  "private": true,
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^9.24.0",
@@ -42,7 +41,6 @@
     "eslint-plugin-prettier": "^5.2.6",
     "nodemon": "^3.1.9",
     "prettier": "^3.5.3",
-    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
@@ -50,6 +48,10 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
+    "@langchain/core": "^0.3.50",
+    "@langchain/groq": "^0.2.2",
+    "@langchain/langgraph": "^0.2.67",
+    "@langchain/langgraph-checkpoint-postgres": "^0.0.4",
     "@prisma/client": "^6.6.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.5.0",

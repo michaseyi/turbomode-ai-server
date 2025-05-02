@@ -1,19 +1,9 @@
-/**
- * Configuration module
- * 
- * Central export point for all application configuration.
- * Handles environment variables, authentication settings, and application constants.
- */
-
 import { env } from './env';
 import { authConfig } from './auth';
 import * as constants from './constants';
 
 export { env, authConfig, constants };
 
-/**
- * Application configuration
- */
 export const config = {
   server: {
     port: env.PORT,
@@ -32,4 +22,3 @@ export const config = {
 };
 
 export default config;
-

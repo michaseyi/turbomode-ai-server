@@ -1,58 +1,42 @@
-/**
- * Environment variables validation and configuration
- * 
- * This file handles loading and validating environment variables
- * with proper typing and default values.
- */
+import z from 'zod';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Environment types
-export type NodeEnv = 'development' | 'production' | 'test';
+const envConfigSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  SERVICE_NAME: z.string().default('TurboMode AI Server'),
+  PORT: z.coerce.number().default(3000),
+  API_PREFIX: z.string().default('/api'),
 
-/**
- * Validates environment variables and provides typed access
- */
-export function validateEnv() {
-  // Required environment variables
-  const requiredEnvVars = [
-    'DATABASE_URL',
-    'JWT_SECRET',
-  ];
+  JWT_SECRET: z.string(),
+  JWT_EXPIRES_IN: z.string().default('7d'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  }
+  GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_SECRET: z.string(),
+  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/v1/auth/google/callback'),
 
-  return {
-    // Server
-    NODE_ENV: (process.env.NODE_ENV as NodeEnv) || 'development',
-    PORT: parseInt(process.env.PORT || '3000', 10),
-    API_PREFIX: process.env.API_PREFIX || '/api',
-    
-    // Auth
-    JWT_SECRET: process.env.JWT_SECRET || '',
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
-    
-    // Google OAuth
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-    GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/v1/auth/google/callback',
-    
-    // Database
-    DATABASE_URL: process.env.DATABASE_URL || '',
-    
-    // CORS
-    CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
-    
-    // Server timeout
-    REQUEST_TIMEOUT: parseInt(process.env.REQUEST_TIMEOUT || '60000', 10),
-  };
-}
+  DATABASE_URL: z.string(),
 
-/**
- * Environment variables with type safety
- */
-export const env = validateEnv();
+  CORS_ORIGIN: z.string().default('*'),
 
+  REQUEST_TIMEOUT: z.coerce.number().default(60000),
+  GROQ_API_KEY: z.string(),
+});
+
+export const env = envConfigSchema.parse({
+  NODE_ENV: process.env.NODE_ENV,
+  SERVICE_NAME: process.env.SERVICE_NAME,
+  PORT: process.env.PORT,
+  API_PREFIX: process.env.API_PREFIX,
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
+  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL,
+  DATABASE_URL: process.env.DATABASE_URL,
+  CORS_ORIGIN: process.env.CORS_ORIGIN,
+  REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT,
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+});

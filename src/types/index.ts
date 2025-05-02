@@ -1,8 +1,5 @@
 import { ContentfulStatusCode } from 'hono/utils/http-status';
 
-/**
- * Base API response interface
- */
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -12,9 +9,6 @@ export interface ApiResponse<T> {
   };
 }
 
-/**
- * Paginated response interface
- */
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   pagination: {
     total: number;
@@ -25,9 +19,6 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
-/**
- * Pagination parameters interface
- */
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -35,17 +26,10 @@ export interface PaginationParams {
   order?: 'asc' | 'desc';
 }
 
-/**
- * Sort direction type
- */
 export type SortDirection = 'asc' | 'desc';
 
-/**
- * API Error interface
- */
-export interface ApiError {
+export interface ServiceError {
   message: string;
-  status: ContentfulStatusCode;
   details?: Record<string, string[]>;
 }
 
@@ -65,5 +49,5 @@ export type ServiceResult<T> =
     }
   | {
       success: false;
-      error: ApiError;
+      error: ServiceError;
     };

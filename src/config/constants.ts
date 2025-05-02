@@ -1,12 +1,3 @@
-/**
- * Application Constants
- * 
- * Central location for all application constants.
- */
-
-/**
- * API Routes
- */
 export const ROUTES = {
   API: {
     ROOT: '/api',
@@ -34,9 +25,6 @@ export const ROUTES = {
   },
 };
 
-/**
- * Auth Constants
- */
 export const AUTH = {
   TOKEN_TYPES: {
     ACCESS: 'access',
@@ -54,15 +42,13 @@ export const AUTH = {
   },
 };
 
-/**
- * Validation Constants
- */
 export const VALIDATION = {
   PASSWORD: {
     MIN_LENGTH: 8,
     MAX_LENGTH: 100,
     PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-    MESSAGE: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
+    MESSAGE:
+      'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
   },
   EMAIL: {
     PATTERN: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
@@ -76,9 +62,6 @@ export const VALIDATION = {
   },
 };
 
-/**
- * Error Messages
- */
 export const ERROR_MESSAGES = {
   AUTH: {
     INVALID_CREDENTIALS: 'Invalid email or password',
@@ -102,12 +85,10 @@ export const ERROR_MESSAGES = {
     INTERNAL_ERROR: 'Internal server error',
     NOT_FOUND: 'Resource not found',
     BAD_REQUEST: 'Bad request',
+    NOT_IMPLEMENTED: 'Not implemented',
   },
 };
 
-/**
- * Time Constants (in milliseconds)
- */
 export const TIME = {
   SECOND: 1000,
   MINUTE: 60 * 1000,
@@ -117,12 +98,8 @@ export const TIME = {
   MONTH: 30 * 24 * 60 * 60 * 1000,
 };
 
-/**
- * Pagination Constants
- */
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 10,
   MAX_LIMIT: 100,
 };
-

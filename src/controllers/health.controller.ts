@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import { BaseController } from '@/controllers';
+import { BaseController } from '@/controllers/base.controller';
 import { prisma } from '@/services';
 
 /**

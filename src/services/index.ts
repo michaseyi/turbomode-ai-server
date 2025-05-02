@@ -1,43 +1,80 @@
+import { ServiceResult } from '@/types';
+import { logger } from '@/utils/logger';
 import { PrismaClient } from '@prisma/client';
 
-// Create a singleton instance of the Prisma client
 export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log: [
+    {
+      emit: 'event',
+      level: 'query',
+    },
+    {
+      emit: 'event',
+      level: 'error',
+    },
+    {
+      emit: 'event',
+      level: 'info',
+    },
+    {
+      emit: 'event',
+      level: 'warn',
+    },
+  ],
 });
 
-/**
- * Base service class that provides access to the Prisma client
- * All service classes should extend this base class
- */
 export class BaseService {
-  protected prisma: PrismaClient;
+  protected db: PrismaClient;
 
   constructor() {
-    this.prisma = prisma;
+    this.db = prisma;
   }
 
-  /**
-   * Clean up resources when the service is no longer needed
-   */
-  async disconnect(): Promise<void> {
-    await this.prisma.$disconnect();
+  success<T>(data: T): ServiceResult<T> {
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  error<T>(message: string, details?: Record<string, string[]>): ServiceResult<T> {
+    return {
+      success: false,
+      error: {
+        message,
+        details,
+      },
+    };
   }
 }
 
-/**
- * Handles graceful shutdown of the Prisma client
- */
 export async function disconnectPrisma(): Promise<void> {
   await prisma.$disconnect();
 }
 
-// Initialize Prisma connection on startup
 export async function initPrisma(): Promise<void> {
   try {
     await prisma.$connect();
-    console.info('Database connection established');
+
+    prisma.$on('query', e => {
+      logger.debug('Prisma query', e);
+    });
+
+    prisma.$on('error', e => {
+      logger.error('Prisma error', e);
+    });
+
+    prisma.$on('info', e => {
+      logger.info('Prisma info', e);
+    });
+
+    prisma.$on('warn', e => {
+      logger.warn('Prisma warning', e);
+    });
+
+    logger.info('Database connection established');
   } catch (error) {
-    console.error('Failed to connect to database:', error);
+    logger.error('Failed to connect to database:', error);
     process.exit(1);
   }
 }

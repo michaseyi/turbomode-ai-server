@@ -1,13 +1,6 @@
-/**
- * Health Check Routes
- *
- * Endpoints for application health monitoring and status checks.
- */
-
 import { Hono } from 'hono';
 import { healthController } from '@/controllers/health.controller';
 
-// Create router for health-related endpoints
 const healthRouter = new Hono();
 
 /**
