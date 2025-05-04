@@ -14,7 +14,7 @@ const envConfigSchema = z.object({
 
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
-  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/v1/auth/google/callback'),
+  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/v1/auth/google'),
 
   DATABASE_URL: z.string(),
 

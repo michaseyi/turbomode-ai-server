@@ -1,2 +1,3 @@
-export { healthController } from '@/controllers/health.controller';
-export { authController } from '@/controllers/auth.controller';
+export { healthController } from '@/controllers/health';
+export { authController } from '@/controllers/auth';
+export { baseController } from '@/controllers/base';

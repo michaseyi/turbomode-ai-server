@@ -4,13 +4,14 @@ import {
   JwtPayload,
   TokenResponse,
   LoginCredentials,
-  RegisterData,
-  GoogleProfile,
+  RegisterCredentials,
 } from '@/types/auth';
 import { authConfig } from '@/config/auth';
 import { ERROR_MESSAGES } from '@/config/constants';
 import { ServiceResult } from '@/types';
 import { logger } from '@/utils/logger';
+import { GoogleUser } from '@hono/oauth-providers/google';
+import assert from 'assert';
 
 // These would normally be imported from actual packages
 // For this example, we'll mock their functionality
@@ -40,51 +41,58 @@ export class AuthService extends BaseService {
   /**
    * Login with email and password
    */
-  async login(credentials: LoginCredentials): Promise<ServiceResult<TokenResponse>> {
-    try {
-      const { email, password } = credentials;
+  async login(loginCredentials: LoginCredentials): Promise<ServiceResult<TokenResponse>> {
+    const { email, password } = loginCredentials;
 
-      const user = await this.db.user.findUnique({
-        where: { email },
-      });
+    const existingUser = await this.db.user.findUnique({ where: { email } });
 
-      if (!user) {
-        return this.error(ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
-      }
-
-      const isPasswordValid = await mockComparePassword(password, user.password);
-      if (!isPasswordValid) {
-        return this.error(ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
-      }
-
-      const tokens = this.generateTokens(user);
-
-      return this.success(tokens);
-    } catch (error) {
-      logger.error('Login error', error);
-      return this.error(ERROR_MESSAGES.SERVER.INTERNAL_ERROR);
+    if (!existingUser) {
+      return this.error(ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
+
+    if (!existingUser.password) {
+      return this.error(ERROR_MESSAGES.AUTH.OAUTH_ACCOUNT_EXISTS);
+    }
+
+    const isPasswordValid = await mockComparePassword(password, existingUser.password);
+
+    if (!isPasswordValid) {
+      return this.error(ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
+    }
+
+    const tokens = this.generateTokens(existingUser);
+
+    logger.info('User logged in', tokens);
+
+    return this.success('Login successful', tokens);
   }
 
   /**
    * Register a new user
    */
-  async register(data: RegisterData): Promise<ServiceResult<AuthUser>> {
-    const { email, password, passwordConfirm } = data;
+  async register(registerCredentials: RegisterCredentials): Promise<ServiceResult<{}>> {
+    const { email, password, firstName, lastName } = registerCredentials;
 
-    if (password !== passwordConfirm) {
-      return this.error('Passwords do not match');
+    const existingUser = await this.db.user.findUnique({ where: { email } });
+
+    if (existingUser) {
+      return this.error(ERROR_MESSAGES.AUTH.EMAIL_TAKEN);
     }
 
-    const emailExists = await this.db.user.findUnique({
-      where: { email },
+    const hashedPassword = await mockHashPassword(password);
+
+    const createdUser = await this.db.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+      },
     });
 
-    if (emailExists) {
-      return this.error(ERROR_MESSAGES.AUTH.EMAIL_ALREADY_EXISTS);
-    }
+    logger.info('User registered', createdUser);
 
-    return this.error(ERROR_MESSAGES.SERVER.NOT_IMPLEMENTED);
+    return this.success('User registered successfully', {});
   }
 
   /**
@@ -104,7 +112,29 @@ export class AuthService extends BaseService {
   /**
    * Handle Google OAuth authentication
    */
-  async googleAuth(profile: GoogleProfile): Promise<ServiceResult<TokenResponse>> {
+  async googleAuth(profile: Partial<GoogleUser>): Promise<ServiceResult<TokenResponse>> {
+    const { id } = profile;
+    assert(id, 'Google ID is required');
+    assert(profile.email, 'Email is required');
+    assert(profile.given_name, 'First name is required');
+    assert(profile.family_name, 'Last name is required');
+
+    const existingUser = await this.db.user.findFirst({ where: { googleId: id } });
+
+    const tokens = this.generateTokens(
+      existingUser ??
+        (await this.db.user.create({
+          data: {
+            email: profile.email,
+            firstName: profile.given_name,
+            lastName: profile.family_name,
+            googleId: id,
+          },
+        }))
+    );
+
+    logger.info('User authenticated with Google', tokens);
+
     return this.error(ERROR_MESSAGES.SERVER.NOT_IMPLEMENTED);
   }
 

@@ -48,6 +48,10 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
+    "@hono/oauth-providers": "^0.7.1",
+    "@hono/swagger-ui": "^0.5.1",
+    "@hono/zod-openapi": "^0.19.6",
+    "@hono/zod-validator": "^0.4.3",
     "@langchain/core": "^0.3.50",
     "@langchain/groq": "^0.2.2",
     "@langchain/langgraph": "^0.2.67",
@@ -60,6 +64,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "prisma": "^6.6.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3",
+    "zod-openapi": "^4.2.4"
   }
 }

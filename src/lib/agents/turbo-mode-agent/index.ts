@@ -321,23 +321,23 @@ Note: 'Completed' means you have perfomed the step and marked it as done. 'Pendi
   return graph;
 }
 
-const llm = new ChatGroq({
-  // model: 'mistral-saba-24b',
-  model: 'qwen-qwq-32b',
-  // model: 'gemma2-9b-it',
-  // model: 'llama-3.1-8b-instant',
-  temperature: 0.7,
-  // maxTokens: 500,
-  apiKey: env.GROQ_API_KEY,
-});
+// const llm = new ChatGroq({
+//   // model: 'mistral-saba-24b',
+//   model: 'qwen-qwq-32b',
+//   // model: 'gemma2-9b-it',
+//   // model: 'llama-3.1-8b-instant',
+//   temperature: 0.7,
+//   // maxTokens: 500,
+//   apiKey: env.GROQ_API_KEY,
+// });
 
-const agent = createTurobModeAgent({
-  tools: tools,
-  llm: llm,
-});
+// const agent = createTurobModeAgent({
+//   tools: tools,
+//   llm: llm,
+// });
 
-const stream = await agent.stream({ messages: messages }, { configurable: {} });
+// const stream = await agent.stream({ messages: messages }, { configurable: {} });
 
-for await (const m of stream) {
-  console.log(m);
-}
+// for await (const m of stream) {
+//   console.log(m);
+// }

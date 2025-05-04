@@ -1,3 +1,6 @@
+import { authValidation } from '@/validation';
+import { z } from 'zod';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -12,47 +15,11 @@ export interface JwtPayload {
   type: 'access' | 'refresh';
 }
 
-export interface TokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: string;
-}
+export type TokenResponse = z.infer<typeof authValidation.loginResponse>;
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-}
+export type LoginCredentials = z.infer<typeof authValidation.loginCredentials>;
 
-export interface RegisterData {
-  email: string;
-  password: string;
-  passwordConfirm: string;
-}
-
-export interface GoogleProfile {
-  id: string;
-  displayName: string;
-  name?: {
-    familyName?: string;
-    givenName?: string;
-  };
-  emails?: Array<{ value: string; verified: boolean }>;
-  photos?: Array<{ value: string }>;
-  provider: 'google';
-  _raw: string;
-  _json: {
-    sub: string;
-    name?: string;
-    given_name?: string;
-    family_name?: string;
-    picture?: string;
-    email?: string;
-    email_verified?: boolean;
-    locale?: string;
-  };
-}
+export type RegisterCredentials = z.infer<typeof authValidation.registrationCredentials>;
 
 export interface AuthSession {
   user: AuthUser;

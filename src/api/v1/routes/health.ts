@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
-import { healthController } from '@/controllers/health.controller';
+import { healthController } from '@/controllers/health';
+import { OpenAPIHono } from '@hono/zod-openapi';
 
-const healthRouter = new Hono();
+const healthRouter = new OpenAPIHono();
 
 /**
  * @route GET /health
@@ -9,12 +10,5 @@ const healthRouter = new Hono();
  * @access Public
  */
 healthRouter.get('/', healthController.getStatus);
-
-/**
- * @route GET /health/db
- * @description Check database connection
- * @access Public
- */
-healthRouter.get('/db', healthController.checkDatabase);
 
 export { healthRouter };

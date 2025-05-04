@@ -1,15 +1,20 @@
-import { ContentfulStatusCode } from 'hono/utils/http-status';
+import { baseValidation } from '@/validation';
+import { z } from 'zod';
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: {
-    message: string;
-    details?: Record<string, string[]>;
-  };
-}
+export type ApiSuccessResponse<T> = {
+  success: true;
+  message: string;
+  data: T;
+};
 
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+export type ApiSuccessResponseWithoutData = z.infer<typeof baseValidation.apiDatalessResponse>;
+
+export type ApiErrorResponse = z.infer<typeof baseValidation.apiErrorResponse>;
+
+export type ApiPaginatedResponse<T> = {
+  success: true;
+  message: string;
+  data: T[];
   pagination: {
     total: number;
     page: number;
@@ -17,37 +22,21 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
     pages: number;
     hasMore: boolean;
   };
-}
-
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
-}
-
-export type SortDirection = 'asc' | 'desc';
+};
 
 export interface ServiceError {
   message: string;
   details?: Record<string, string[]>;
 }
 
-/**
- * Service result interface for consistent returns
- */
-// export interface ServiceResult<T> {
-//   success: boolean;
-//   data?: T;
-//   error?: ApiError;
-// }
-
 export type ServiceResult<T> =
   | {
-      success: true;
+      ok: true;
+      message: string;
       data: T;
     }
   | {
-      success: false;
+      ok: false;
+      message: string;
       error: ServiceError;
     };

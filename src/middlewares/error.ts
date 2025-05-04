@@ -1,35 +1,33 @@
-import { Context, Next, MiddlewareHandler } from 'hono';
+import { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { ERROR_MESSAGES } from '@/config/constants.js';
-import { env } from '@/config/env.js';
-import { BaseController } from '@/controllers/base.controller';
+import { ERROR_MESSAGES } from '@/config/constants';
+import { env } from '@/config/env';
+import { BaseController } from '@/controllers/base';
+import { logger } from '@/utils/logger';
+import { ErrorHandler } from 'hono/types';
 
 export class ErrorMiddleware extends BaseController {
   /**
    * Catches all errors thrown during request processing and formats
    * them into consistent error responses.
    */
-  errorHandler: MiddlewareHandler = async (c: Context, next: Next) => {
-    try {
-      return await next();
-    } catch (error) {
-      console.error('Uncaught error in request handler:', error);
+  errorHandler: ErrorHandler = async (e: Error | HTTPException, c: Context) => {
+    logger.error('Uncaught error in request handler', e);
 
-      if (error instanceof HTTPException) {
-        const message = error.message || ERROR_MESSAGES.SERVER.INTERNAL_ERROR;
-        const status = error.status;
-        return this.sendError(c, message, status);
-      }
-
-      const message = error instanceof Error ? error.message : ERROR_MESSAGES.SERVER.INTERNAL_ERROR;
-      const errorDetails =
-        env.NODE_ENV === 'development'
-          ? {
-              stack: error instanceof Error ? error.stack : undefined,
-            }
-          : undefined;
-      return this.sendError(c, message, 500, errorDetails);
+    if (e instanceof HTTPException) {
+      const message = e.message || ERROR_MESSAGES.SERVER.INTERNAL_ERROR;
+      const status = e.status;
+      return this.sendError(c, message, status);
     }
+
+    const message = e instanceof Error ? e.message : ERROR_MESSAGES.SERVER.INTERNAL_ERROR;
+    const errorDetails =
+      env.NODE_ENV === 'development'
+        ? {
+            stack: e instanceof Error ? e.stack : undefined,
+          }
+        : undefined;
+    return this.sendError(c, message, 500, errorDetails);
   };
 
   /**
@@ -37,7 +35,9 @@ export class ErrorMiddleware extends BaseController {
    * 404 response.
    */
   notFoundHandler = (c: Context) => {
-    return this.sendError(c, ERROR_MESSAGES.SERVER.NOT_FOUND, 404, {});
+    return this.sendError(c, ERROR_MESSAGES.SERVER.NOT_FOUND, 404, {
+      path: c.req.path,
+    });
   };
 }
 

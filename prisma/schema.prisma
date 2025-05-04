@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  // output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -15,12 +14,35 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String   @unique
+  id           String        @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String        @unique
   profileImage String?
-  password    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  password     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  googleId     String?
+  isEmailVerified Boolean @default(false)
+  integrations Integration[]
+}
+
+model Integration {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  type         IntegrationType
+  instructions String?
+  enabled      Boolean         @default(true)
+  accessToken  String?
+  config       Json?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+enum IntegrationType {
+  GMAIL
+  SLACK
+  ZOOM
 }

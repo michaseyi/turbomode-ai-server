@@ -1,22 +1,43 @@
-import { Hono } from 'hono';
 import { serve, ServerType } from '@hono/node-server';
-import { mounteV1Router } from '@/api/v1';
+import { v1 } from '@/api/v1';
 import { initPrisma, disconnectPrisma } from '@/services';
 import { logger } from '@/utils/logger';
 import config from '@/config';
 import { env } from '@/config/env';
 import '@/lib/agents/turbo-mode-agent';
+import { errorMiddleware, loggerMiddleware } from '@/middlewares';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors';
+import { timing } from 'hono/timing';
+import { prettyJSON } from 'hono/pretty-json';
 
-const app = new Hono();
+const app = new OpenAPIHono();
 
-mounteV1Router(app);
+app.use(cors());
+app.use(timing());
+app.use(prettyJSON({ space: 2 }));
+
+app.use(loggerMiddleware.requestLogger);
 
 app.get('/', c => {
   return c.json({
-    name: 'Turbomode AI Server',
+    name: env.SERVICE_NAME,
     environment: env.NODE_ENV,
   });
 });
+
+app.route('/api/v1', v1);
+
+app.doc('/api/docs', {
+  openapi: '3.0.0',
+  info: {
+    version: '1.0.0',
+    title: env.SERVICE_NAME,
+  },
+});
+
+app.onError((e, c) => errorMiddleware.errorHandler(e, c));
+app.notFound(c => errorMiddleware.notFoundHandler(c));
 
 function setupGracefulShutdown(server: ServerType) {
   const shutdown = async (signal: string) => {
@@ -24,29 +45,29 @@ function setupGracefulShutdown(server: ServerType) {
 
     if (server) {
       server.close(() => {
-        logger.info('HTTP server closed');
+        logger.info('http server closed');
       });
     }
 
     try {
       await disconnectPrisma();
-      logger.info('Database connections closed');
+      logger.info('database connections closed');
     } catch (error) {
-      logger.error('Error during database disconnection:', error);
+      logger.error('error during database disconnection', error);
     }
 
     process.exit(0);
   };
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('sigterm'));
+  process.on('SIGINT', () => shutdown('sigint'));
 }
 
 export async function startApp() {
   try {
     await initPrisma();
 
-    logger.info(`Server starting on http://localhost:${config.server.port}`);
+    logger.info(`server starting on http://localhost:${config.server.port}`);
 
     const server = serve({
       fetch: app.fetch,
@@ -57,14 +78,14 @@ export async function startApp() {
 
     return server;
   } catch (error) {
-    logger.error('Failed to start server:', error);
+    logger.error('failed to start server:', error);
     process.exit(1);
   }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   startApp().catch(error => {
-    logger.error('Unhandled error during server startup:', error);
+    logger.error('unhandled error during server startup', error);
     process.exit(1);
   });
 }

@@ -31,8 +31,8 @@ export const AUTH = {
     REFRESH: 'refresh',
   },
   COOKIES: {
-    ACCESS_TOKEN: 'access_token',
-    REFRESH_TOKEN: 'refresh_token',
+    ACCESS_TOKEN: 'access-token',
+    REFRESH_TOKEN: 'refresh-token',
   },
   HEADERS: {
     AUTHORIZATION: 'Authorization',
@@ -65,9 +65,9 @@ export const VALIDATION = {
 export const ERROR_MESSAGES = {
   AUTH: {
     INVALID_CREDENTIALS: 'Invalid email or password',
+    EMAIL_TAKEN: 'Email is already taken',
     ACCOUNT_LOCKED: 'Account is locked. Please contact support',
     ACCOUNT_DISABLED: 'Account is disabled',
-    EMAIL_ALREADY_EXISTS: 'Email already exists',
     USERNAME_ALREADY_EXISTS: 'Username already exists',
     UNAUTHORIZED: 'Unauthorized access',
     FORBIDDEN: 'Forbidden access',
@@ -75,6 +75,8 @@ export const ERROR_MESSAGES = {
     INVALID_TOKEN: 'Invalid token',
     OAUTH_FAILURE: 'OAuth authentication failed',
     MISSING_TOKEN: 'Authentication token is missing',
+    OAUTH_ACCOUNT_EXISTS:
+      'This email is linked to a social login. Please sign in with your OAuth provider.',
   },
   USER: {
     NOT_FOUND: 'User not found',
