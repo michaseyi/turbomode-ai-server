@@ -1,11 +1,12 @@
 import { authController } from '@/controllers';
-import { authMiddleware } from '@/middlewares/auth';
+import { authMiddleware } from '@/middlewares';
 import { googleAuth } from '@hono/oauth-providers/google';
 import { authConfig } from '@/config';
-import { authValidation, baseValidation, resolveApiResponse } from '@/validation';
+import { authValidation, baseValidation } from '@/validation';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import { controllerUtil } from '@/utils';
 
-const authRouter = new OpenAPIHono();
+export const authRouter = new OpenAPIHono();
 
 authRouter.openapi(
   createRoute({
@@ -27,7 +28,7 @@ authRouter.openapi(
         description: 'Successful login',
         content: {
           'application/json': {
-            schema: resolveApiResponse(authValidation.loginResponse),
+            schema: controllerUtil.resolveApiResponseSchema(authValidation.loginResponse),
           },
         },
       },
@@ -42,7 +43,7 @@ authRouter.openapi(
       },
     },
   }),
-  async c => authController.login(c)
+  authController.login
 );
 
 authRouter.openapi(
@@ -79,49 +80,97 @@ authRouter.openapi(
       },
     },
   }),
-  c => authController.register(c)
+  authController.register
 );
-
-/**
- * @route POST /auth/refresh
- * @description Refresh access token using refresh token
- * @access Public
- */
-authRouter.post('/refresh', c => authController.refreshToken(c));
-
-/**
- * @route POST /auth/logout
- * @description Logout user and invalidate tokens
- * @access Private
- */
-authRouter.post('/logout', authMiddleware.ensureAuthenticated, c => authController.logout(c));
-
-/**
- * @route GET /auth/me
- * @description Get current authenticated user
- * @access Private
- */
 
 authRouter.openapi(
   createRoute({
-    method: 'get',
-    path: '/me',
-    description: '',
+    method: 'post',
+    path: '/refresh',
+    description: 'Refresh access tokens',
     tags: ['Auth'],
     responses: {
       200: {
         description: '',
         content: {
           'application/json': {
-            schema: z.any(),
+            schema: controllerUtil.resolveApiResponseSchema(authValidation.loginResponse),
+          },
+        },
+      },
+
+      401: {
+        description: 'Missing or invalid refresh token',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  authController.refreshToken
+);
+
+authRouter.openapi(
+  createRoute({
+    method: 'post',
+    path: '/logout',
+    description: 'Logout user and invalidate tokens',
+    tags: ['Auth'],
+    responses: {
+      200: {
+        description: 'Logout successful',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiDatalessResponse,
+          },
+        },
+      },
+
+      401: {
+        description: 'Missing or invalid access token',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+    middleware: authMiddleware.ensureAuthenticated,
+  }),
+  authController.logout
+);
+
+authRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/me',
+    description: 'Get current authenticated user',
+    tags: ['Auth'],
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: controllerUtil.resolveApiResponseSchema(z.object({})),
           },
         },
       },
     },
 
-    middleware: [(c, n) => authMiddleware.ensureAuthenticated(c, n)],
+    middleware: authMiddleware.ensureAuthenticated,
   }),
-  c => authController.getCurrentUser(c)
+  authController.getCurrentUser
 );
 
 authRouter.openapi(
@@ -134,13 +183,13 @@ authRouter.openapi(
       200: {
         description: '',
         content: {
-          'application/json': {
-            schema: resolveApiResponse(authValidation.loginResponse),
+          'text/html': {
+            schema: z.string(),
           },
         },
       },
       400: {
-        description: 'Invalid credentials',
+        description: 'Oauth error',
         content: {
           'application/json': {
             schema: baseValidation.apiErrorResponse,
@@ -154,7 +203,5 @@ authRouter.openapi(
       scope: ['profile', 'email', 'openid'],
     }),
   }),
-  c => authController.googleCallback(c)
+  authController.googleCallback
 );
-
-export { authRouter };

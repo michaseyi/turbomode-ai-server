@@ -12,8 +12,8 @@ import {
 } from '@langchain/langgraph';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 
-import { env } from '@/config';
-import { tools } from '@/lib/tools';
+import { config } from '@/config';
+import { baseTools } from '@/lib/tools';
 import {
   AIMessage,
   BaseMessage,
@@ -328,11 +328,11 @@ Note: 'Completed' means you have perfomed the step and marked it as done. 'Pendi
 //   // model: 'llama-3.1-8b-instant',
 //   temperature: 0.7,
 //   // maxTokens: 500,
-//   apiKey: env.GROQ_API_KEY,
+//   apiKey: config.env.GROQ_API_KEY,
 // });
 
 // const agent = createTurobModeAgent({
-//   tools: tools,
+//   tools: Object.values(baseTools),
 //   llm: llm,
 // });
 

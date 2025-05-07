@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger';
+import { loggerUtil } from '@/utils';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
@@ -24,8 +24,7 @@ export const search = tool(
 
 export const setReminder = tool(
   async ({ time, message }) => {
-    logger.info(`Setting reminder, ${time} ${message}`);
-    // In a real scenario, this would interact with a calendar API or database.
+    loggerUtil.info(`Setting reminder, ${time} ${message}`);
     return 'Reminder set!';
   },
   {

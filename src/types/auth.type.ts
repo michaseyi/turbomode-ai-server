@@ -17,9 +17,9 @@ export interface JwtPayload {
 
 export type TokenResponse = z.infer<typeof authValidation.loginResponse>;
 
-export type LoginCredentials = z.infer<typeof authValidation.loginCredentials>;
+export type LoginPayload = z.infer<typeof authValidation.loginCredentials>;
 
-export type RegisterCredentials = z.infer<typeof authValidation.registrationCredentials>;
+export type RegisterPayload = z.infer<typeof authValidation.registrationCredentials>;
 
 export interface AuthSession {
   user: AuthUser;

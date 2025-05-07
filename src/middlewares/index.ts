@@ -1,5 +1,3 @@
-import { authMiddleware } from '@/middlewares/auth';
-import { errorMiddleware } from '@/middlewares/error';
-import { loggerMiddleware } from '@/middlewares/logger';
-
-export { authMiddleware, errorMiddleware, loggerMiddleware };
+export * as authMiddleware from '@/middlewares/auth.middleware';
+export * as errorMiddleware from '@/middlewares/error.middleware';
+export * as loggerMiddleware from '@/middlewares/logger.middleware';

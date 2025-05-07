@@ -32,6 +32,7 @@
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^9.24.0",
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^22.14.1",
     "@typescript-eslint/eslint-plugin": "^8.29.1",
     "@typescript-eslint/parser": "^8.29.1",
@@ -47,6 +48,7 @@
     "vitest": "^3.1.1"
   },
   "dependencies": {
+    "@google-cloud/pubsub": "^5.0.0",
     "@hono/node-server": "^1.14.1",
     "@hono/oauth-providers": "^0.7.1",
     "@hono/swagger-ui": "^0.5.1",
@@ -59,6 +61,7 @@
     "@prisma/client": "^6.6.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.5.0",
+    "googleapis": "^148.0.0",
     "hono": "^4.7.6",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",

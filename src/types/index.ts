@@ -24,8 +24,16 @@ export type ApiPaginatedResponse<T> = {
   };
 };
 
+export enum ServiceErrorCode {
+  NotFound,
+  InvalidCredentials,
+  Conflict,
+  NotImplemented,
+}
+
 export interface ServiceError {
   message: string;
+  code: ServiceErrorCode;
   details?: Record<string, string[]>;
 }
 

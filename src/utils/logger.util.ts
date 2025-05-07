@@ -1,13 +1,14 @@
 import { Context } from 'hono';
-import { env } from '@/config/env';
+import { config } from '@/config';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 const LOG_CONFIG = {
   development: {
     level: 'debug',
     colorize: true,
-    showHeaders: true,
-    showBody: true,
+    showHeaders: !true,
+    showBody: !true,
   },
   production: {
     level: 'info',
@@ -23,7 +24,7 @@ const LOG_CONFIG = {
   },
 };
 
-export const loggerConfig = LOG_CONFIG[env.NODE_ENV || 'development'] || LOG_CONFIG.development;
+export const logConfig = LOG_CONFIG[config.app.environment];
 
 /**
  * Format request for logging
@@ -35,7 +36,7 @@ export function formatRequest(c: Context, reqId: string): string {
 
   let log = `${method} ${path} ${id}`;
 
-  if (loggerConfig.showHeaders) {
+  if (logConfig.showHeaders) {
     const headers = Object.entries(c.req.header())
       .filter(([key]) => !['cookie', 'authorization'].includes(key.toLowerCase()))
       .map(([key, value]) => `${key}: ${value}`);
@@ -61,19 +62,18 @@ export function formatResponse(_: Context, status: number, duration: number): st
 /**
  * Log a message with appropriate level and formatting
  */
-function log(level: LogLevel, message: string, ...args: any[]) {
+export function log(level: LogLevel, message: string, ...args: any[]) {
   const timestamp = new Date().toISOString();
 
   const logEntry: Record<string, any> = {
     timestamp,
     level,
     message,
-    service: env.SERVICE_NAME || 'unknown-service',
-    environment: env.NODE_ENV || 'development',
+    service: config.app.name || '',
+    environment: config.app.environment,
   };
 
   if (args && args.length > 0) {
-    // If extra args exist, attach them as metadata
     logEntry.metadata = args.length === 1 ? args[0] : args;
   }
 
@@ -98,23 +98,25 @@ function log(level: LogLevel, message: string, ...args: any[]) {
 /**
  * Logger utility
  */
-export const logger = {
-  debug: (message: string, ...args: any[]) => {
-    if (['debug'].includes(loggerConfig.level)) {
-      log('debug', message, ...args);
-    }
-  },
-  info: (message: string, ...args: any[]) => {
-    if (['debug', 'info'].includes(loggerConfig.level)) {
-      log('info', message, ...args);
-    }
-  },
-  warn: (message: string, ...args: any[]) => {
-    if (['debug', 'info', 'warn'].includes(loggerConfig.level)) {
-      log('warn', message, ...args);
-    }
-  },
-  error: (message: string, ...args: any[]) => {
-    log('error', message, ...args);
-  },
-};
+
+export function debug(message: string, ...args: any[]) {
+  if (['debug'].includes(logConfig.level)) {
+    log('debug', message, ...args);
+  }
+}
+
+export function info(message: string, ...args: any[]) {
+  if (['debug', 'info'].includes(logConfig.level)) {
+    log('info', message, ...args);
+  }
+}
+
+export function warn(message: string, ...args: any[]) {
+  if (['debug', 'info', 'warn'].includes(logConfig.level)) {
+    log('warn', message, ...args);
+  }
+}
+
+export function error(message: string, ...args: any[]) {
+  log('error', message, ...args);
+}
