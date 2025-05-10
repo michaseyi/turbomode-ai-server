@@ -1,11 +1,11 @@
-import { controllerUtil } from '@/utils';
+import { controllerUtils } from '@/utils';
 import { Context } from 'hono';
 
 /**
  * Get basic health status
  */
 export async function getStatus(c: Context) {
-  return controllerUtil.createSuccessResponse(
+  return controllerUtils.createSuccessResponse(
     c,
     'Health check successful',
     {

@@ -1,12 +1,14 @@
 import { authController } from '@/controllers';
 import { authMiddleware } from '@/middlewares';
 import { googleAuth } from '@hono/oauth-providers/google';
-import { authConfig } from '@/config';
-import { authValidation, baseValidation } from '@/validation';
+import { authConfig, config } from '@/config';
+import { authValidation, baseValidation, userValidation } from '@/validation';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
-import { controllerUtil } from '@/utils';
+import { controllerUtils } from '@/utils';
 
-export const authRouter = new OpenAPIHono();
+export const authRouter = new OpenAPIHono({
+  defaultHook: controllerUtils.validationHook,
+});
 
 authRouter.openapi(
   createRoute({
@@ -28,7 +30,7 @@ authRouter.openapi(
         description: 'Successful login',
         content: {
           'application/json': {
-            schema: controllerUtil.resolveApiResponseSchema(authValidation.loginResponse),
+            schema: controllerUtils.resolveApiResponseSchema(authValidation.loginResponse),
           },
         },
       },
@@ -94,7 +96,7 @@ authRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: controllerUtil.resolveApiResponseSchema(authValidation.loginResponse),
+            schema: controllerUtils.resolveApiResponseSchema(authValidation.loginResponse),
           },
         },
       },
@@ -162,12 +164,19 @@ authRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: controllerUtil.resolveApiResponseSchema(z.object({})),
+            schema: controllerUtils.resolveApiResponseSchema(userValidation.fetchedUser),
+          },
+        },
+      },
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
           },
         },
       },
     },
-
     middleware: authMiddleware.ensureAuthenticated,
   }),
   authController.getCurrentUser
@@ -183,13 +192,13 @@ authRouter.openapi(
       200: {
         description: '',
         content: {
-          'text/html': {
-            schema: z.string(),
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(authValidation.loginResponse),
           },
         },
       },
       400: {
-        description: 'Oauth error',
+        description: '',
         content: {
           'application/json': {
             schema: baseValidation.apiErrorResponse,
@@ -201,6 +210,7 @@ authRouter.openapi(
       client_id: authConfig.google.clientID,
       client_secret: authConfig.google.clientSecret,
       scope: ['profile', 'email', 'openid'],
+      redirect_uri: config.env.GOOGLE_CALLBACK_URL,
     }),
   }),
   authController.googleCallback

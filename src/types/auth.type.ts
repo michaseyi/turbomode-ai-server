@@ -1,17 +1,16 @@
 import { authValidation } from '@/validation';
+import { Role } from '@prisma/client';
 import { z } from 'zod';
 
 export interface AuthUser {
   id: string;
   email: string;
   isEmailVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  role: Role;
 }
 
-export interface JwtPayload {
-  userId: string;
-  email: string;
+export interface JwtPayload<T> {
+  data: T;
   type: 'access' | 'refresh';
 }
 

@@ -24,11 +24,22 @@ export type ApiPaginatedResponse<T> = {
   };
 };
 
+export type ApiQuery<T> = {
+  limit?: number;
+  page?: number;
+  sortBy?: keyof T;
+  sortOrder?: 'asc' | 'desc';
+  rangeField?: keyof T;
+  rangeFrom?: string;
+  rangeTo?: string;
+} & T;
+
 export enum ServiceErrorCode {
   NotFound,
   InvalidCredentials,
   Conflict,
   NotImplemented,
+  Bad,
 }
 
 export interface ServiceError {
@@ -37,7 +48,7 @@ export interface ServiceError {
   details?: Record<string, string[]>;
 }
 
-export type ServiceResult<T> =
+export type ServiceResult<T = undefined> =
   | {
       ok: true;
       message: string;

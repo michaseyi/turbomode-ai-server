@@ -13,32 +13,58 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  User
+  Admin
+}
+
 model User {
-  id           String        @id @default(cuid())
-  firstName    String
-  lastName     String
-  email        String        @unique
-  profileImage String?
-  password     String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  googleId     String?
-  isEmailVerified Boolean @default(false)
-  integrations Integration[]
+  id              String        @id @default(cuid())
+  firstName       String
+  role            Role
+  lastName        String
+  email           String        @unique
+  profileImage    String?
+  password        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  googleId        String?
+  isEmailVerified Boolean       @default(false)
+  integrations    Integration[]
 }
 
 model Integration {
   id     String @id @default(cuid())
   user   User   @relation(fields: [userId], references: [id])
   userId String
-
   type         IntegrationType
-  instructions String?
   enabled      Boolean         @default(true)
-  accessToken  String?
-  config       Json?
+  gmail GmailIntegration?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+}
+
+
+enum EmailProcessOption {
+  All
+  FromSpecific
+  ExceptSpecific
+}
+
+model GmailIntegration {
+  id   String @id @default(cuid())
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  integrationId String @unique
+  email String
+  accessToken String
+  refreshToken String
+  instruction String
+
+  emailProcessOption EmailProcessOption @default(All)
+  specificAddresses String? // used in conjuction with emailProcssingOption
+
+  processAttachment Boolean @default(false)
+  processThreadHistory Boolean @default(false)
 }
 
 enum IntegrationType {

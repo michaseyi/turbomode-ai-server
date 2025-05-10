@@ -1,5 +1,5 @@
 import { healthController } from '@/controllers';
-import { controllerUtil } from '@/utils';
+import { controllerUtils } from '@/utils';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 
 export const healthRouter = new OpenAPIHono();
@@ -15,7 +15,7 @@ healthRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: controllerUtil.resolveApiResponseSchema(z.object({})),
+            schema: controllerUtils.resolveApiResponseSchema(z.object({})),
           },
         },
       },

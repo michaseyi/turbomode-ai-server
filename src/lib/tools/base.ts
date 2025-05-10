@@ -1,4 +1,4 @@
-import { loggerUtil } from '@/utils';
+import { loggerUtils } from '@/utils';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
@@ -24,7 +24,7 @@ export const search = tool(
 
 export const setReminder = tool(
   async ({ time, message }) => {
-    loggerUtil.info(`Setting reminder, ${time} ${message}`);
+    loggerUtils.info(`Setting reminder, ${time} ${message}`);
     return 'Reminder set!';
   },
   {

@@ -1,7 +1,8 @@
 import type { Context, Next, MiddlewareHandler } from 'hono';
-import { AuthUser } from '@/types/auth.type.js';
+import type { AuthUser } from '@/types/auth.type.js';
 import { messages } from '@/config/constants';
-import { controllerUtil } from '@/utils';
+import { controllerUtils, tokenUtils } from '@/utils';
+import { Role } from '@/lib/db';
 
 export interface AuthContext {
   user?: AuthUser;
@@ -14,11 +15,19 @@ export interface AuthContext {
  *
  */
 export async function ensureAuthenticated(c: Context, next: Next) {
-  const accessToken = controllerUtil.getAccessToken(c);
+  const accessToken = controllerUtils.getAccessToken(c);
 
   if (!accessToken) {
-    return controllerUtil.createErrorResponse(c, messages.auth.MISSING_TOKEN, 400);
+    return controllerUtils.createErrorResponse(c, messages.auth.NOT_AUTHENTICATED, 401);
   }
+
+  const user = tokenUtils.getTokenData<AuthUser>(accessToken, 'access');
+
+  if (!user) {
+    return controllerUtils.createErrorResponse(c, messages.auth.NOT_AUTHENTICATED, 401);
+  }
+
+  c.set('user', user);
 
   return await next();
 }
@@ -28,8 +37,18 @@ export async function ensureAuthenticated(c: Context, next: Next) {
  * Must be used after authMiddleware.
  *
  */
-export const ensureRole = (requiredRole: string): MiddlewareHandler => {
-  return async c => {
-    return controllerUtil.createErrorResponse(c, messages.server.NOT_IMPLEMENTED, 400);
+export const ensureRole = (role: Role): MiddlewareHandler => {
+  return async (c, next) => {
+    const user = c.get('user');
+
+    if (!user) {
+      return controllerUtils.createErrorResponse(c, messages.auth.NOT_AUTHENTICATED, 401);
+    }
+
+    if (user.role !== role) {
+      return controllerUtils.createErrorResponse(c, messages.auth.NOT_AUTHORIZED, 403);
+    }
+
+    return await next();
   };
 };

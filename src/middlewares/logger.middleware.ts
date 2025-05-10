@@ -1,4 +1,4 @@
-import { loggerUtil } from '@/utils';
+import { loggerUtils } from '@/utils';
 import { Context, Next, MiddlewareHandler } from 'hono';
 import { nanoid } from 'nanoid';
 
@@ -11,7 +11,7 @@ export const requestLogger: MiddlewareHandler = async (c: Context, next: Next) =
   c.set('requestId', requestId);
 
   const startTime = performance.now();
-  loggerUtil.info(`${loggerUtil.formatRequest(c, requestId)}`);
+  loggerUtils.info(`${loggerUtils.formatRequest(c, requestId)}`);
 
   await next();
 
@@ -19,5 +19,5 @@ export const requestLogger: MiddlewareHandler = async (c: Context, next: Next) =
 
   const status = c.res ? c.res.status : 200;
 
-  loggerUtil.info(`${loggerUtil.formatResponse(c, status, duration)}`);
+  loggerUtils.info(`${loggerUtils.formatResponse(c, status, duration)}`);
 };

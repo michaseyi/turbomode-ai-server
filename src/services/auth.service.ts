@@ -1,10 +1,10 @@
 import { AuthUser, TokenResponse, LoginPayload, RegisterPayload } from '@/types/auth.type';
 import { messages } from '@/config/constants';
 import { ServiceErrorCode, ServiceResult } from '@/types';
-import { encryptionUtil, loggerUtil, serviceUtil, tokenUtil } from '@/utils';
+import { encryptionUtils, loggerUtils, serviceUtils, tokenUtils } from '@/utils';
 import { GoogleUser } from '@hono/oauth-providers/google';
 import assert from 'assert';
-import { db } from '@/db';
+import { db, Role } from '@/lib/db';
 
 /**
  * Login with email and password
@@ -15,33 +15,33 @@ export async function login(payload: LoginPayload): Promise<ServiceResult<TokenR
   const existingUser = await db.user.findUnique({ where: { email } });
 
   if (!existingUser) {
-    return serviceUtil.createErrorResult(
+    return serviceUtils.createErrorResult(
       messages.auth.INVALID_CREDENTIALS,
       ServiceErrorCode.InvalidCredentials
     );
   }
 
   if (!existingUser.password) {
-    return serviceUtil.createErrorResult(
+    return serviceUtils.createErrorResult(
       messages.auth.OAUTH_ACCOUNT_EXISTS,
       ServiceErrorCode.NotImplemented
     );
   }
 
-  const isPasswordValid = await encryptionUtil.compareHash(password, existingUser.password);
+  const isPasswordValid = await encryptionUtils.compareHash(password, existingUser.password);
 
   if (!isPasswordValid) {
-    return serviceUtil.createErrorResult(
+    return serviceUtils.createErrorResult(
       messages.auth.INVALID_CREDENTIALS,
       ServiceErrorCode.InvalidCredentials
     );
   }
 
-  const tokens = tokenUtil.generateTokens(existingUser);
+  const tokens = tokenUtils.generateTokens(existingUser);
 
-  loggerUtil.info('Successful user login', tokens);
+  loggerUtils.info('Successful user login', tokens);
 
-  return serviceUtil.createSuccessResult('Login successful', tokens);
+  return serviceUtils.createSuccessResult('Login successful', tokens);
 }
 
 /**
@@ -53,30 +53,31 @@ export async function register(payload: RegisterPayload): Promise<ServiceResult<
   const existingUser = await db.user.findUnique({ where: { email } });
 
   if (existingUser) {
-    return serviceUtil.createErrorResult(messages.auth.EMAIL_TAKEN, ServiceErrorCode.Conflict);
+    return serviceUtils.createErrorResult(messages.auth.EMAIL_TAKEN, ServiceErrorCode.Conflict);
   }
 
-  const hashedPassword = await encryptionUtil.hash(password);
+  const hashedPassword = await encryptionUtils.hash(password);
 
   const createdUser = await db.user.create({
     data: {
       email,
       password: hashedPassword,
+      role: Role.User,
       firstName,
       lastName,
     },
   });
 
-  loggerUtil.info('User registered', createdUser);
+  loggerUtils.info('User registered', createdUser);
 
-  return serviceUtil.createSuccessResult('User registered successfully', {});
+  return serviceUtils.createSuccessResult('User registered successfully', {});
 }
 
 /**
  * Refresh access token using refresh token
  */
 export async function refreshToken(refreshToken: string): Promise<ServiceResult<TokenResponse>> {
-  return serviceUtil.createErrorResult(
+  return serviceUtils.createErrorResult(
     messages.server.NOT_IMPLEMENTED,
     ServiceErrorCode.NotImplemented
   );
@@ -86,7 +87,7 @@ export async function refreshToken(refreshToken: string): Promise<ServiceResult<
  * Validate access token and get user data
  */
 export async function validateToken(token: string): Promise<ServiceResult<AuthUser>> {
-  return serviceUtil.createErrorResult(
+  return serviceUtils.createErrorResult(
     messages.server.NOT_IMPLEMENTED,
     ServiceErrorCode.NotImplemented
   );
@@ -96,7 +97,7 @@ export async function validateToken(token: string): Promise<ServiceResult<AuthUs
  * Logout user (blacklist token)
  */
 export async function logout(token: string): Promise<ServiceResult<null>> {
-  return serviceUtil.createErrorResult(
+  return serviceUtils.createErrorResult(
     messages.server.NOT_IMPLEMENTED,
     ServiceErrorCode.NotImplemented
   );
@@ -116,11 +117,12 @@ export async function googleAuth(
 
   const existingUser = await db.user.findFirst({ where: { googleId: id } });
 
-  const tokens = tokenUtil.generateTokens(
+  const tokens = tokenUtils.generateTokens(
     existingUser ??
       (await db.user.create({
         data: {
           email: profile.email,
+          role: Role.User,
           firstName: profile.given_name,
           lastName: profile.family_name,
           googleId: id,
@@ -128,7 +130,7 @@ export async function googleAuth(
       }))
   );
 
-  loggerUtil.info('User authenticated with Google', tokens);
+  loggerUtils.info('User authenticated with Google', tokens);
 
-  return serviceUtil.createSuccessResult('User authenticated with Google', tokens);
+  return serviceUtils.createSuccessResult('User authenticated with Google', tokens);
 }

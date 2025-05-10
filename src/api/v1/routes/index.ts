@@ -1,4 +1,3 @@
-import { healthRouter } from '@/api/v1/routes/health.route';
-import { authRouter } from '@/api/v1/routes/auth.route';
-
-export { healthRouter, authRouter };
+export { healthRouter } from '@/api/v1/routes/health.route';
+export { authRouter } from '@/api/v1/routes/auth.route';
+export { integrationRouter } from '@/api/v1/routes/integration.route';

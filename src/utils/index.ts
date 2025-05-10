@@ -1,5 +1,7 @@
-export * as controllerUtil from '@/utils/controller.util';
-export * as serviceUtil from '@/utils/service.util';
-export * as tokenUtil from '@/utils/token.util';
-export * as encryptionUtil from '@/utils/encryption.util';
-export * as loggerUtil from '@/utils/logger.util';
+export * as controllerUtils from '@/utils/controller.utils';
+export * as serviceUtils from '@/utils/service.utils';
+export * as tokenUtils from '@/utils/token.utils';
+export * as encryptionUtils from '@/utils/encryption.utils';
+export * as loggerUtils from '@/utils/logger.utils';
+export * as apiUtils from '@/utils/api.utils';
+export * as googleUtils from '@/utils/google.utils';

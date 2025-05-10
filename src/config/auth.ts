@@ -1,12 +1,13 @@
 import { env } from '@/config/env';
+import { timeMs } from './constants';
 
 export const jwtConfig = {
   secret: env.JWT_SECRET,
   accessToken: {
-    expiresIn: env.JWT_EXPIRES_IN,
+    expiresIn: timeMs.HOUR * 2,
   },
   refreshToken: {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+    expiresIn: timeMs.DAY * 4,
   },
 };
 

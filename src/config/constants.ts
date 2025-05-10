@@ -30,7 +30,6 @@ export const messages = {
     ACCOUNT_LOCKED: 'Account is locked. Please contact support',
     ACCOUNT_DISABLED: 'Account is disabled',
     USERNAME_ALREADY_EXISTS: 'Username already exists',
-    UNAUTHORIZED: 'Unauthorized access',
     FORBIDDEN: 'Forbidden access',
     TOKEN_EXPIRED: 'Token has expired',
     INVALID_TOKEN: 'Invalid token',
@@ -38,6 +37,8 @@ export const messages = {
     MISSING_TOKEN: 'Authentication token is missing',
     OAUTH_ACCOUNT_EXISTS:
       'This email is linked to a social login. Please sign in with your OAuth provider.',
+    NOT_AUTHENTICATED: 'Not authenticated',
+    NOT_AUTHORIZED: 'Not authorized',
   },
   user: {
     NOT_FOUND: 'User not found',
@@ -52,7 +53,7 @@ export const messages = {
   },
 };
 
-export const time = {
+export const timeMs = {
   SECOND: 1000,
   MINUTE: 60 * 1000,
   HOUR: 60 * 60 * 1000,

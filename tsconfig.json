@@ -26,7 +26,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "lib": ["ESNext"]
+    "lib": ["ESNext"],
+    "typeRoots": ["src/types"]
   },
   "ts-node": {
     "esm": true,

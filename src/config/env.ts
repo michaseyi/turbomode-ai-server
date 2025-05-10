@@ -14,9 +14,10 @@ const envConfigSchema = z.object({
 
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
-  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/v1/auth/google'),
+  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3001/oauth/callback'),
   GOOGLE_APPLICATION_CREDENTIALS: z.string(),
   GOOGLE_PUBSUB_INCOMING_MAIL_SUB: z.string(),
+  GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC: z.string(),
 
   DATABASE_URL: z.string(),
 
@@ -45,5 +46,8 @@ export const env = envConfigSchema.parse({
   GROQ_API_KEY: process.env.GROQ_API_KEY,
   GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
   GOOGLE_PUBSUB_INCOMING_MAIL_SUB: process.env.GOOGLE_PUBSUB_INCOMING_MAIL_SUB,
+  GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC: process.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC,
   FRONTEND_URL: process.env.FRONTEND_URL,
 });
+
+

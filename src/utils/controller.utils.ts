@@ -10,7 +10,7 @@ import { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { z } from 'zod';
+import { SafeParseReturnType, z } from 'zod';
 
 /**
  * Send a successful response with data
@@ -153,9 +153,6 @@ export function clearAuthCookies(c: Context) {
  * Get access token from request
  */
 export function getAccessToken(c: Context): string | undefined {
-  const cookieToken = getCookie(c, auth.cookies.ACCESS_TOKEN);
-  if (cookieToken) return cookieToken;
-
   const authHeader = c.req.header(auth.headers.AUTHORIZATION);
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
@@ -195,4 +192,11 @@ export function resolvePaginatedApiResponseSchema<T>(schema: z.ZodType<T>) {
       hasMore: z.boolean(),
     }),
   });
+}
+export function validationHook(result: SafeParseReturnType<any, any>, c: Context) {
+  if (result.success) {
+    return;
+  }
+  const issue = result.error.issues[0].message;
+  return createErrorResponse(c, issue, 400);
 }
