@@ -22,10 +22,17 @@ export async function addGmailIntegration(
   const oauth2Client = googleUtils.createOauthClient();
 
   loggerUtils.debug('getting tokens...');
-  const { tokens } = await oauth2Client.getToken(code);
+
+  let tokens;
+  try {
+    const res = await oauth2Client.getToken(code);
+    tokens = res.tokens;
+  } catch (error) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
 
   if (!tokens.refresh_token || !tokens.access_token) {
-    return serviceUtils.createErrorResult('Invalid token from code', ServiceErrorCode.Bad);
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
   }
 
   loggerUtils.debug('setting tokens...');
@@ -34,9 +41,14 @@ export async function addGmailIntegration(
   const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
 
   loggerUtils.debug('getting email info...');
-  const {
-    data: { email },
-  } = await oauth2.userinfo.get();
+  let email;
+
+  try {
+    const { data } = await oauth2.userinfo.get();
+    email = data.email;
+  } catch (error) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
 
   if (!email) {
     // should not occur excepts email was not included in the scope
@@ -125,14 +137,17 @@ export async function deleteGmailIntegration(
     refresh_token: integration.gmail.refreshToken,
   });
 
-  // disable watch
-  loggerUtils.debug('unwatching mail...');
-  await googleUtils.unWatchMail(oauth);
+  try {
+    // disable watch
+    loggerUtils.debug('unwatching mail...');
+    await googleUtils.unWatchMail(oauth);
 
-  // revoke tokens
-  loggerUtils.debug('revoking tokens...');
-  await googleUtils.revokeToken(integration.gmail.refreshToken);
-
+    // revoke tokens
+    loggerUtils.debug('revoking tokens...');
+    await googleUtils.revokeToken(integration.gmail.refreshToken);
+  } catch (error) {
+    loggerUtils.error('google service error', error);
+  }
   // delete integration
   loggerUtils.debug('cleaning from db...');
   await db.integration.delete({ where: { id: integration.id } });
