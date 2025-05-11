@@ -27,7 +27,7 @@ export const integrationValidation = {
       IntegrationType.Gmail,
       IntegrationType.Zoom,
       IntegrationType.Slack,
-      IntegrationType.Calendar,
+      IntegrationType.Gcalendar,
     ]),
     gmail: z.object({
       email: z.string().email(),

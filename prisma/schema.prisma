@@ -71,5 +71,5 @@ enum IntegrationType {
   Gmail
   Slack
   Zoom
-  Calendar
+  Gcalendar
 }
