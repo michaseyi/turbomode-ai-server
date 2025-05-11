@@ -23,7 +23,12 @@ export const integrationValidation = {
   fetchedGmailIntegration: z.object({
     id: z.string(),
     enabled: z.boolean(),
-    type: z.enum([IntegrationType.GMAIL, IntegrationType.ZOOM, IntegrationType.SLACK]),
+    type: z.enum([
+      IntegrationType.Gmail,
+      IntegrationType.Zoom,
+      IntegrationType.Slack,
+      IntegrationType.Calendar,
+    ]),
     gmail: z.object({
       email: z.string().email(),
       processAttachment: z.boolean(),

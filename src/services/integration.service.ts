@@ -69,7 +69,7 @@ export async function addGmailIntegration(
   return await db.$transaction(async tx => {
     const integration = await tx.integration.create({
       data: {
-        type: IntegrationType.GMAIL,
+        type: IntegrationType.Gmail,
         enabled: true,
         userId: user.id,
       },
@@ -105,7 +105,7 @@ export async function modifyGmailIntegration(
   updates: ModifyGmailIntegrationPayload
 ): Promise<ServiceResult> {
   const integration = await db.integration.findUnique({
-    where: { id: integrationId, userId, type: IntegrationType.GMAIL },
+    where: { id: integrationId, userId, type: IntegrationType.Gmail },
     include: { gmail: true },
   });
 
@@ -122,7 +122,7 @@ export async function deleteGmailIntegration(
   integrationId: string
 ): Promise<ServiceResult> {
   const integration = await db.integration.findUnique({
-    where: { id: integrationId, userId, type: IntegrationType.GMAIL },
+    where: { id: integrationId, userId, type: IntegrationType.Gmail },
     include: { gmail: true },
   });
 
@@ -160,7 +160,7 @@ export async function enableGmailIntegration(
   integrationId: string
 ): Promise<ServiceResult> {
   const integration = await db.integration.findUnique({
-    where: { id: integrationId, userId, type: IntegrationType.GMAIL },
+    where: { id: integrationId, userId, type: IntegrationType.Gmail },
     include: { gmail: true },
   });
 
@@ -192,7 +192,7 @@ export async function disableGmailIntegration(
   integrationId: string
 ): Promise<ServiceResult> {
   const integration = await db.integration.findUnique({
-    where: { id: integrationId, userId, type: IntegrationType.GMAIL },
+    where: { id: integrationId, userId, type: IntegrationType.Gmail },
     include: { gmail: true },
   });
 
@@ -223,7 +223,7 @@ export async function getGmailIntegrations(
   userId: string
 ): Promise<ServiceResult<FetchedGmailIntegration[]>> {
   const res = await db.integration.findMany({
-    where: { userId, type: IntegrationType.GMAIL },
+    where: { userId, type: IntegrationType.Gmail },
     include: { gmail: { omit: { accessToken: true, refreshToken: true } } },
   });
 
