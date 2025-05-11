@@ -55,7 +55,7 @@ model GmailIntegration {
   id   String @id @default(cuid())
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   integrationId String @unique
-  email String
+  email String @unique
   accessToken String
   refreshToken String
   instruction String

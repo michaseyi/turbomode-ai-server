@@ -2,7 +2,7 @@
   "watch": ["src"],
   "ext": "ts,json",
   "ignore": ["src/**/*.test.ts", "dist/", "node_modules/", "tests/"],
-  "exec": "NODE_ENV=development tsx src/index.ts",
+  "exec": "NODE_ENV=development tsx src/server/index.ts",
   "restartable": "rs",
   "delay": 500,
   "env": {

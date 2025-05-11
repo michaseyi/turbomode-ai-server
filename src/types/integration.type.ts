@@ -10,3 +10,13 @@ export type ModifyGmailIntegrationPayload = z.infer<
 export type FetchedGmailIntegration = z.infer<typeof integrationValidation.fetchedGmailIntegration>;
 
 export type IntegrationBaseParams = z.infer<typeof integrationValidation.integrationBaseParams>;
+
+export type GmailPushNotification = z.infer<typeof integrationValidation.gmailPush>;
+
+export type MailMessage = {
+  from: string | null;
+  to: string | null;
+  subject: string | null;
+  date: string | null;
+  body: string;
+};

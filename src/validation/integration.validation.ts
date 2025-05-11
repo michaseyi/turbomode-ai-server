@@ -2,6 +2,11 @@ import { EmailProcessOption, IntegrationType } from '@prisma/client';
 import { z } from 'zod';
 
 export const integrationValidation = {
+  gmailPush: z.object({
+    emailAddress: z.string().email(),
+    historyId: z.coerce.string(),
+  }),
+
   addGmailIntegration: z.object({
     code: z.string(),
   }),

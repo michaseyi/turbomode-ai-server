@@ -7,3 +7,7 @@ services:
       - POSTGRES_DB=mydb
     ports:
       - '5432:5432'
+  redis:
+    image: redis/redis-stack-server
+    ports:
+      - '6379:6379'
