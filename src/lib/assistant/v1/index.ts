@@ -2,6 +2,7 @@ import { createReactAgent, ToolNode, toolsCondition } from '@langchain/langgraph
 import { ChatGroq } from '@langchain/groq';
 import {
   Annotation,
+  BaseCheckpointSaver,
   Command,
   END,
   MemorySaver,
@@ -128,6 +129,7 @@ type PlanStepsUpdate = PlanStep[] | { index: number; step: PlanStep };
 type CreateTurobModeAgentParams = {
   llm: BaseChatModel;
   tools: (StructuredToolInterface | DynamicTool | RunnableToolLike)[];
+  checkpointer: BaseCheckpointSaver;
 };
 
 const setTaskSteps = tool(
@@ -181,8 +183,8 @@ const markTaskDone = tool(
   }
 );
 
-function createTurobModeAgent(params: CreateTurobModeAgentParams) {
-  const { tools, llm } = params;
+function createAgent(params: CreateTurobModeAgentParams) {
+  const { tools, llm, checkpointer } = params;
 
   if (!llm.bindTools) {
     throw new Error('Model should impliment the `bindTools` method.');
@@ -316,28 +318,50 @@ Note: 'Completed' means you have perfomed the step and marked it as done. 'Pendi
     .addEdge('tools', 'llm')
     .addEdge(START, 'planner');
 
-  const graph = graphBuilder.compile();
+  const graph = graphBuilder.compile({
+    checkpointer,
+  });
 
   return graph;
 }
 
-// const llm = new ChatGroq({
-//   // model: 'mistral-saba-24b',
-//   model: 'qwen-qwq-32b',
-//   // model: 'gemma2-9b-it',
-//   // model: 'llama-3.1-8b-instant',
-//   temperature: 0.7,
-//   // maxTokens: 500,
-//   apiKey: config.env.GROQ_API_KEY,
-// });
+type createAssistantInstanceOptions = {
+  model?: string;
+};
 
-// const agent = createTurobModeAgent({
-//   tools: Object.values(baseTools),
-//   llm: llm,
-// });
+export async function buildAssistant(options: createAssistantInstanceOptions) {
+  const checkpointer = PostgresSaver.fromConnString(config.database.url, {
+    schema: 'agent',
+  });
 
-// const stream = await agent.stream({ messages: messages }, { configurable: {} });
+  await checkpointer.setup();
 
-// for await (const m of stream) {
-//   console.log(m);
+  const llm = new ChatGroq({
+    // model: 'mistral-saba-24b',
+    model: 'qwen-qwq-32b',
+    // model: 'gemma2-9b-it',
+    // model: 'llama-3.1-8b-instant',
+    temperature: 0.7,
+    // maxTokens: 500,
+    apiKey: config.env.GROQ_API_KEY,
+  });
+
+  const agent = createAgent({
+    tools: Object.values(baseTools),
+    llm: llm,
+    checkpointer,
+  });
+
+  return agent;
+}
+
+// const assistant = await buildAssistant({});
+
+// const stream = await assistant.stream(
+//   { messages: messages },
+//   { configurable: { thread_id: 'adsf' } }
+// );
+
+// for await (const s of stream) {
+//   console.log(s);
 // }

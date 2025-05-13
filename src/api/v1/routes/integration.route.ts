@@ -104,7 +104,7 @@ integrationRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: baseValidation.apiDatalessResponse,
+            schema: baseValidation.apiResponse,
           },
         },
       },
@@ -135,7 +135,7 @@ integrationRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: baseValidation.apiDatalessResponse,
+            schema: baseValidation.apiResponse,
           },
         },
       },
@@ -166,7 +166,7 @@ integrationRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: baseValidation.apiDatalessResponse,
+            schema: baseValidation.apiResponse,
           },
         },
       },
@@ -198,7 +198,7 @@ integrationRouter.openapi(
         description: '',
         content: {
           'application/json': {
-            schema: baseValidation.apiDatalessResponse,
+            schema: baseValidation.apiResponse,
           },
         },
       },

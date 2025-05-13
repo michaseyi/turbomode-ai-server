@@ -115,20 +115,34 @@ export async function googleAuth(
   assert(profile.given_name, 'First name is required');
   assert(profile.family_name, 'Last name is required');
 
-  const existingUser = await db.user.findFirst({ where: { googleId: id } });
-
-  const tokens = tokenUtils.generateTokens(
-    existingUser ??
-      (await db.user.create({
-        data: {
-          email: profile.email,
-          role: Role.User,
-          firstName: profile.given_name,
-          lastName: profile.family_name,
+  const existingUser = await db.user.findFirst({
+    where: {
+      OR: [
+        {
           googleId: id,
         },
-      }))
-  );
+        {
+          email: profile.email,
+        },
+      ],
+    },
+  });
+
+  let user = existingUser;
+
+  if (!user) {
+    user = await db.user.create({
+      data: {
+        email: profile.email,
+        role: Role.User,
+        firstName: profile.given_name,
+        lastName: profile.family_name,
+        googleId: id,
+      },
+    });
+  }
+
+  const tokens = tokenUtils.generateTokens(user);
 
   loggerUtils.info('User authenticated with Google', tokens);
 

@@ -1,3 +1,6 @@
+import { integrationValidation } from '@/validation';
+import { z } from 'zod';
+
 export type EmailJobData = {
   to: string;
   subject: string;
@@ -10,3 +13,10 @@ export type GmailMessageJobData = {
   email: string;
   integrationId: string;
 };
+
+export type InvokeAssistantJobData = {
+  userId: string;
+  prompt: string;
+};
+
+export type GmailPushJobData = z.infer<typeof integrationValidation.gmailPush>;

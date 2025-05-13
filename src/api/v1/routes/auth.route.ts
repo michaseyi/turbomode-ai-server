@@ -68,7 +68,7 @@ authRouter.openapi(
         description: 'User successfully registered.',
         content: {
           'application/json': {
-            schema: baseValidation.apiDatalessResponse,
+            schema: baseValidation.apiResponse,
           },
         },
       },
@@ -134,7 +134,7 @@ authRouter.openapi(
         description: 'Logout successful',
         content: {
           'application/json': {
-            schema: baseValidation.apiDatalessResponse,
+            schema: baseValidation.apiResponse,
           },
         },
       },

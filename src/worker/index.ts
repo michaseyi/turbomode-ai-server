@@ -1,8 +1,13 @@
 import { Worker } from 'bullmq';
 import { redis } from '@/lib/cache';
 import { loggerUtils } from '@/utils';
-import { EmailJobData, GmailMessageJobData } from '@/types/queue.type';
-import { integrationService, mailService } from '@/services';
+import {
+  EmailJobData,
+  GmailMessageJobData,
+  GmailPushJobData,
+  InvokeAssistantJobData,
+} from '@/types/queue.type';
+import { actionService, integrationService, mailService } from '@/services';
 import { Message } from '@google-cloud/pubsub';
 import { config } from '@/config';
 import { pubsub } from '@/lib/pubsub';
@@ -18,13 +23,17 @@ export function createBullMqWorker<T>(queueName: string, handler: BullMqWorkerHa
       await handler(job);
     },
     { connection: redis }
-  );
+  ).on('active', () => {
+    loggerUtils.info(`[${queueName}] processing new job`);
+  });
 
   loggerUtils.info(`bullmq worker for ${queueName} is running`);
 }
 
 export function createPubSubWorker(topic: string, handler: PubSubWorkerHandler) {
-  const sub = pubsub.subscription(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_SUB);
+  const sub = pubsub.subscription(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_SUB, {
+    flowControl: { maxMessages: 10 },
+  });
 
   sub.on('message', handler);
 
@@ -36,5 +45,13 @@ createBullMqWorker<GmailMessageJobData>('gmail-message', job =>
 );
 
 createBullMqWorker<EmailJobData>('email', job => mailService.send(job.data));
+
+createBullMqWorker<InvokeAssistantJobData>('invoke-assistant', job =>
+  actionService.invokeBgAssistant(job.data)
+);
+
+createBullMqWorker<GmailPushJobData>('gmail-pubsub-push', job =>
+  integrationService.processGmailHistory(job.data)
+);
 
 createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);

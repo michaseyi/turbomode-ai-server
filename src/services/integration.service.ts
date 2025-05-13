@@ -1,12 +1,12 @@
 import { db, EmailProcessOption, IntegrationType } from '@/lib/db';
-import { gmailMessageQueue, invokeAgentQueue } from '@/queues';
+import { gmailMessageQueue, gmailPubSubQueue, invokeAgentQueue } from '@/queues';
 import { ServiceErrorCode, ServiceResult } from '@/types';
 import {
   AddGmailIntegrationPayload,
   FetchedGmailIntegration,
   ModifyGmailIntegrationPayload,
 } from '@/types/integration.type';
-import { GmailMessageJobData } from '@/types/queue.type';
+import { GmailMessageJobData, GmailPushJobData } from '@/types/queue.type';
 import { googleUtils, loggerUtils, serviceUtils } from '@/utils';
 import { integrationValidation } from '@/validation';
 import { Message } from '@google-cloud/pubsub';
@@ -242,18 +242,20 @@ export async function onGmailHistory(message: Message): Promise<ServiceResult> {
   loggerUtils.info('incoming pubsub message');
   try {
     data = integrationValidation.gmailPush.parse(JSON.parse(message.data.toString()));
+    await gmailPubSubQueue.add('gmail-pubsub', data);
+    return serviceUtils.createSuccessResult('Gmail pubsub pushed to queue', undefined);
   } catch (error) {
     loggerUtils.info('pubsub received invalid message', { message: message.data.toString() });
     message.ack();
     return serviceUtils.createSuccessResult('Gmail pubsub processed', undefined);
   }
-  const { emailAddress, historyId } = data;
+}
 
+export async function processGmailHistory(data: GmailPushJobData): Promise<ServiceResult> {
+  const { historyId, emailAddress } = data;
   const integration = await db.gmailIntegration.findUnique({ where: { email: emailAddress } });
 
   if (!integration) {
-    message.ack();
-
     return serviceUtils.createSuccessResult('Gmail pubsub processed', undefined);
   }
 
@@ -273,7 +275,6 @@ export async function onGmailHistory(message: Message): Promise<ServiceResult> {
   });
 
   const history = response.data.history || [];
-
   const messageIds = history.flatMap(record => (record.messages || []).map(({ id }) => id!));
 
   if (messageIds.length) {
@@ -300,7 +301,6 @@ export async function onGmailHistory(message: Message): Promise<ServiceResult> {
     }))
   );
 
-  message.ack();
   loggerUtils.info('finished processing pubsub message');
 
   return serviceUtils.createSuccessResult('Gmail pubsub processed', undefined);
@@ -312,6 +312,7 @@ export async function processGmailMessage(data: GmailMessageJobData): Promise<Se
   const integration = await db.integration.findUnique({
     where: { id: data.integrationId, type: IntegrationType.Gmail },
     include: {
+      user: true,
       gmail: true,
     },
   });
@@ -338,6 +339,14 @@ export async function processGmailMessage(data: GmailMessageJobData): Promise<Se
 
   const parsedMessage = googleUtils.parseGmailMessage(message.data);
 
+  console.log(parsedMessage);
+
+  // if there are not instructions skip processing email? because of ambiguity?
+  if (!integration.gmail.instruction.length) {
+    loggerUtils.debug('skipping email - no instructions');
+    return serviceUtils.createSuccessResult('Skipping email message', undefined);
+  }
+
   if (integration.gmail.emailProcessOption !== EmailProcessOption.All && parsedMessage.from) {
     // check if the email should be processed
     const valueSpec = integration.gmail.specificAddresses;
@@ -359,7 +368,10 @@ export async function processGmailMessage(data: GmailMessageJobData): Promise<Se
   }
 
   // invoke agent
-  invokeAgentQueue.add('invoke-assistant', {});
+  invokeAgentQueue.add('invoke-assistant', {
+    userId: integration.user.id,
+    prompt: '', // build prompt from mail message, and user specific instructions
+  });
 
   loggerUtils.info('done processing gmail action request');
   return serviceUtils.createSuccessResult('Agent triggered', undefined);

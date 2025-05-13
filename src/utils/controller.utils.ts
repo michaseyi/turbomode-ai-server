@@ -200,3 +200,7 @@ export function validationHook(result: SafeParseReturnType<any, any>, c: Context
   const issue = result.error.issues[0].message;
   return createErrorResponse(c, issue, 400);
 }
+
+export async function placeholder(c: Context) {
+  return createSuccessResponse(c, 'Placeholder here', undefined, 200);
+}

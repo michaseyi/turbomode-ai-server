@@ -7,7 +7,7 @@ export type ApiSuccessResponse<T> = {
   data: T;
 };
 
-export type ApiSuccessResponseWithoutData = z.infer<typeof baseValidation.apiDatalessResponse>;
+export type ApiSuccessResponseWithoutData = z.infer<typeof baseValidation.apiResponse>;
 
 export type ApiErrorResponse = z.infer<typeof baseValidation.apiErrorResponse>;
 

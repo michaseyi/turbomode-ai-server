@@ -31,6 +31,7 @@ model User {
   googleId        String?
   isEmailVerified Boolean       @default(false)
   integrations    Integration[]
+  actions Action[]
 }
 
 model Integration {
@@ -72,4 +73,36 @@ enum IntegrationType {
   Slack
   Zoom
   Gcalendar
+}
+
+
+enum ActionTrigger {
+  User
+  Assistant
+  DataSource
+}
+
+
+model Action {
+  id String @id @default(cuid())
+  trigger ActionTrigger
+  active Boolean
+  title String
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ActionMessage[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+enum ActionMessageSource {
+  User
+  Assistant
+}
+
+model ActionMessage {
+  id String @id @default(cuid())
+  source ActionMessageSource
+  actionId String
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
 }

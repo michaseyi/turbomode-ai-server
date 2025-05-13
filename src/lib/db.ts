@@ -11,6 +11,10 @@ export const db = new PrismaClient({
   ],
 });
 
+const modelList = [db.user, db.action, db.gmailIntegration, db.integration];
+
+export type DbModel = (typeof modelList)[number];
+
 export async function disconnectDb(): Promise<void> {
   await db.$disconnect();
 }
