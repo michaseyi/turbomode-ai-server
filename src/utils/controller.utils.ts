@@ -158,7 +158,9 @@ export function getAccessToken(c: Context): string | undefined {
     return authHeader.substring(7);
   }
 
-  return undefined;
+  return c.req.query('token');
+
+  // return undefined;
 }
 
 /**

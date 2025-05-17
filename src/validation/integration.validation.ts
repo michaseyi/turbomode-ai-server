@@ -7,7 +7,7 @@ export const integrationValidation = {
     historyId: z.coerce.string(),
   }),
 
-  addGmailIntegration: z.object({
+  addGoogleIntegration: z.object({
     code: z.string(),
   }),
 
@@ -28,12 +28,7 @@ export const integrationValidation = {
   fetchedGmailIntegration: z.object({
     id: z.string(),
     enabled: z.boolean(),
-    type: z.enum([
-      IntegrationType.Gmail,
-      IntegrationType.Zoom,
-      IntegrationType.Slack,
-      IntegrationType.Gcalendar,
-    ]),
+    type: z.literal(IntegrationType.Gmail),
     gmail: z.object({
       email: z.string().email(),
       processAttachment: z.boolean(),
@@ -45,6 +40,17 @@ export const integrationValidation = {
         EmailProcessOption.ExceptSpecific,
         EmailProcessOption.FromSpecific,
       ]),
+    }),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+  }),
+
+  fetchedGoogleCalendarIntegration: z.object({
+    id: z.string(),
+    enabled: z.boolean(),
+    type: z.literal(IntegrationType.Gcalendar),
+    gCalendar: z.object({
+      email: z.string().email(),
     }),
     createdAt: z.date(),
     updatedAt: z.date(),

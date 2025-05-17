@@ -1,7 +1,9 @@
 import { integrationValidation } from '@/validation';
 import { z } from 'zod';
 
-export type AddGmailIntegrationPayload = z.infer<typeof integrationValidation.addGmailIntegration>;
+export type AddGoogleIntegrationPayload = z.infer<
+  typeof integrationValidation.addGoogleIntegration
+>;
 
 export type ModifyGmailIntegrationPayload = z.infer<
   typeof integrationValidation.modifyGmailIntegration

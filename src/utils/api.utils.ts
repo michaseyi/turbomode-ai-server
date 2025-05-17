@@ -72,10 +72,10 @@ export const buildPaginatedRouteHandler = <U, T extends ApiQuery<U>, V>(
   const { model, schema, fetchOptions = () => ({}) } = options;
 
   return async function handler(
-    c: Context<{}, any, { out: { param: z.infer<typeof schema.query> } }>
+    c: Context<{}, any, { out: { query: z.infer<typeof schema.query> } }>
   ) {
     const user = c.get('user')!;
-    const query = c.req.valid('param');
+    const query = c.req.valid('query');
 
     const result = await dbUtils.paginate<U>(model, {
       ...query,

@@ -21,7 +21,7 @@ integrationRouter.openapi(
         required: true,
         content: {
           'application/json': {
-            schema: integrationValidation.addGmailIntegration,
+            schema: integrationValidation.addGoogleIntegration,
           },
         },
       },
@@ -53,6 +53,45 @@ integrationRouter.openapi(
 
 integrationRouter.openapi(
   createRoute({
+    method: 'post',
+    path: '/google-calendar',
+    description: 'Create new google calendar integration',
+    tags: ['Integration'],
+    request: {
+      body: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: integrationValidation.addGoogleIntegration,
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  integrationController.addGoogleCalendarIntegration
+);
+
+integrationRouter.openapi(
+  createRoute({
     method: 'get',
     path: '/gmail',
     description: 'Get gmail integrations',
@@ -80,6 +119,37 @@ integrationRouter.openapi(
     },
   }),
   integrationController.getGmailIntegration
+);
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/google-calendar',
+    description: 'Get google calendar integrations',
+    tags: ['Integration'],
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(
+              integrationValidation.fetchedGoogleCalendarIntegration.array()
+            ),
+          },
+        },
+      },
+
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  integrationController.getGoogleCalendarIntegration
 );
 
 integrationRouter.openapi(
@@ -150,6 +220,37 @@ integrationRouter.openapi(
     },
   }),
   integrationController.deleteGmailIntegration
+);
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'delete',
+    path: '/google-calendar/:integrationId',
+    description: 'Delete a google calendar integration',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.integrationBaseParams,
+    },
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  integrationController.deleteGoogleCalendarIntegration
 );
 
 integrationRouter.openapi(

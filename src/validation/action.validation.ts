@@ -8,4 +8,6 @@ export const actionValidation = {
     createdAt: z.date(),
     updatedAt: z.date(),
   }),
+
+  actionMessage: z.object({ event: z.string(), data: z.string() }),
 };

@@ -41,6 +41,7 @@ model Integration {
   type         IntegrationType
   enabled      Boolean         @default(true)
   gmail GmailIntegration?
+  gCalendar GoogleCalendarIntegration?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }
@@ -66,6 +67,17 @@ model GmailIntegration {
 
   processAttachment Boolean @default(false)
   processThreadHistory Boolean @default(false)
+}
+
+model GoogleCalendarIntegration{
+  id   String @id @default(cuid())
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  integrationId String @unique
+
+  email String @unique
+  accessToken String
+  refreshToken String
+
 }
 
 enum IntegrationType {

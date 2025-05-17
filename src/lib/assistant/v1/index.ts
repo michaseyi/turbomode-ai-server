@@ -17,6 +17,7 @@ import { config } from '@/config';
 import { baseTools } from '@/lib/tools';
 import {
   AIMessage,
+  AIMessageChunk,
   BaseMessage,
   HumanMessage,
   SystemMessage,
@@ -27,6 +28,7 @@ import { DynamicTool, StructuredToolInterface, tool } from '@langchain/core/tool
 import { RunnableToolLike } from '@langchain/core/runnables';
 import { z } from 'zod';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { stdout } from 'process';
 
 const messages = [
   //   new SystemMessage(
@@ -234,11 +236,10 @@ function createAgent(params: CreateTurobModeAgentParams) {
   };
 
   const plannerNode = async (state: typeof StateAnnotation.State) => {
-    return {
-      messages: [
-        await plannerLLM.invoke([
-          state.messages[1],
-          new SystemMessage(`
+    const plan = await plannerLLM.invoke(
+      [
+        state.messages[1],
+        new SystemMessage(`
         You are a planner, you job it to create plans.
        You have seen the email, go through it and give a detailed plan of action of what you can do for the user based on the tools that will be available.
 
@@ -247,8 +248,21 @@ function createAgent(params: CreateTurobModeAgentParams) {
 
        ${tools.map(tool => `${tool.name} - ${tool.description}`).join('\n-------------------------------------------------------------\n')}
         `),
-        ]),
+      ],
+      {
+        callbacks: [
+          {
+            handleLLMNewToken(token, idx, runId, parentRunId, tags, fields) {
+              stdout.write(token);
+            },
+          },
+        ],
+      }
+    );
 
+    return {
+      messages: [
+        plan,
         new SystemMessage(`
           Execute the plan step by step.
           `),
@@ -337,12 +351,14 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
   await checkpointer.setup();
 
   const llm = new ChatGroq({
+    streaming: true,
+
     // model: 'mistral-saba-24b',
-    model: 'qwen-qwq-32b',
-    // model: 'gemma2-9b-it',
+    // model: 'qwen-qwq-32b',
+    model: 'gemma2-9b-it',
     // model: 'llama-3.1-8b-instant',
     temperature: 0.7,
-    // maxTokens: 500,
+    maxTokens: 250,
     apiKey: config.env.GROQ_API_KEY,
   });
 
@@ -359,7 +375,7 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
 
 // const stream = await assistant.stream(
 //   { messages: messages },
-//   { configurable: { thread_id: 'adsf' } }
+//   { configurable: { thread_id: 'adsfttt' } }
 // );
 
 // for await (const s of stream) {

@@ -32,8 +32,8 @@ export const baseValidation = {
   }),
 
   apiQuery: z.object({
-    limit: z.number().max(100).optional().default(10),
-    page: z.number().optional().default(1),
+    limit: z.coerce.number().max(100).optional().default(10),
+    page: z.coerce.number().optional().default(1),
     sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
     rangeFrom: z.string().optional(),
     rangeTo: z.string().optional(),

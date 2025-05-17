@@ -3,6 +3,8 @@ import { actionValidation, baseValidation } from '@/validation';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { apiUtils, controllerUtils } from '@/utils';
 import { actionController } from '@/controllers';
+import { stream, streamSSE, streamText } from 'hono/streaming';
+import { actionService } from '@/services';
 
 export const actionRouter = new OpenAPIHono({
   defaultHook: controllerUtils.validationHook,
@@ -17,7 +19,7 @@ actionRouter.openapi(
     description: 'Get actions',
     tags: ['Action'],
     request: {
-      params: baseValidation.apiQuery,
+      query: baseValidation.apiQuery,
     },
     responses: {
       200: {
@@ -112,8 +114,37 @@ actionRouter.openapi(
 
 actionRouter.openapi(
   createRoute({
-    method: 'delete',
+    method: 'post',
     path: '/:actionId',
+    description: 'Interact with an action',
+    tags: ['Action'],
+    request: {},
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  controllerUtils.placeholder
+);
+
+actionRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/:actionId/stream',
     description: 'Delete action',
     tags: ['Action'],
     request: {},
@@ -123,6 +154,10 @@ actionRouter.openapi(
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
+          },
+
+          'text/event-stream': {
+            schema: z.string(),
           },
         },
       },
@@ -137,5 +172,24 @@ actionRouter.openapi(
       },
     },
   }),
-  controllerUtils.placeholder
+
+  async c => {
+    const result = await actionService.streamAction('userId', 'actionId');
+
+    if (!result.ok) {
+      return controllerUtils.createErrorResponse(c, result.message, 400);
+    }
+
+    if (typeof result.data === 'boolean') {
+      return controllerUtils.createSuccessWithoutDataResponse(c, result.message, 200);
+    }
+
+    const messageStream = result.data;
+
+    return streamSSE(c, async stream => {
+      for await (const message of messageStream) {
+        stream.writeSSE(message);
+      }
+    });
+  }
 );

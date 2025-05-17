@@ -2,7 +2,7 @@ import { db, EmailProcessOption, IntegrationType } from '@/lib/db';
 import { gmailMessageQueue, gmailPubSubQueue, invokeAgentQueue } from '@/queues';
 import { ServiceErrorCode, ServiceResult } from '@/types';
 import {
-  AddGmailIntegrationPayload,
+  AddGoogleIntegrationPayload,
   FetchedGmailIntegration,
   ModifyGmailIntegrationPayload,
 } from '@/types/integration.type';
@@ -11,10 +11,11 @@ import { googleUtils, loggerUtils, serviceUtils } from '@/utils';
 import { integrationValidation } from '@/validation';
 import { Message } from '@google-cloud/pubsub';
 import { google } from 'googleapis';
+import { z } from 'zod';
 
 export async function addGmailIntegration(
   userId: string,
-  { code }: AddGmailIntegrationPayload
+  { code }: AddGoogleIntegrationPayload
 ): Promise<ServiceResult<FetchedGmailIntegration>> {
   const user = await db.user.findUnique({ where: { id: userId } });
 
@@ -27,6 +28,7 @@ export async function addGmailIntegration(
   loggerUtils.debug('getting tokens...');
 
   let tokens;
+
   try {
     const res = await oauth2Client.getToken(code);
     tokens = res.tokens;
@@ -236,6 +238,22 @@ export async function getGmailIntegrations(
   );
 }
 
+export async function getGoogleCalendarIntegrations(
+  userId: string
+): Promise<
+  ServiceResult<z.infer<typeof integrationValidation.fetchedGoogleCalendarIntegration>[]>
+> {
+  const res = await db.integration.findMany({
+    where: { userId, type: IntegrationType.Gcalendar },
+    include: { gCalendar: { omit: { accessToken: true, refreshToken: true } } },
+  });
+
+  return serviceUtils.createSuccessResult(
+    'Integrations fetched',
+    integrationValidation.fetchedGoogleCalendarIntegration.array().parse(res)
+  );
+}
+
 export async function onGmailHistory(message: Message): Promise<ServiceResult> {
   let data;
 
@@ -375,4 +393,150 @@ export async function processGmailMessage(data: GmailMessageJobData): Promise<Se
 
   loggerUtils.info('done processing gmail action request');
   return serviceUtils.createSuccessResult('Agent triggered', undefined);
+}
+
+export async function addGoogleCalendarIntegration(
+  userId: string,
+  { code }: AddGoogleIntegrationPayload
+): Promise<ServiceResult> {
+  const user = await db.user.findUnique({ where: { id: userId } });
+
+  if (!user) {
+    return serviceUtils.createErrorResult('User does not exist', ServiceErrorCode.Bad);
+  }
+
+  if (await db.integration.count({ where: { type: 'Gcalendar' } })) {
+    return serviceUtils.createErrorResult(
+      'Google calendar already integreated',
+      ServiceErrorCode.Bad
+    );
+  }
+
+  const oauth2Client = googleUtils.createOauthClient();
+
+  loggerUtils.debug('getting tokens...');
+
+  let tokens;
+
+  try {
+    const res = await oauth2Client.getToken(code);
+    tokens = res.tokens;
+  } catch (error) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
+
+  if (!tokens.refresh_token || !tokens.access_token) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
+
+  loggerUtils.debug('setting tokens...');
+  oauth2Client.setCredentials(tokens);
+
+  const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+
+  loggerUtils.debug('getting email info...');
+  let email;
+
+  try {
+    const { data } = await oauth2.userinfo.get();
+    email = data.email;
+  } catch (error) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
+
+  if (!email) {
+    return serviceUtils.createErrorResult('Email not included in scope', ServiceErrorCode.Bad);
+  }
+
+  const refreshToken = tokens.refresh_token;
+  const accessToken = tokens.access_token;
+
+  return await db.$transaction(async tx => {
+    const integration = await tx.integration.create({
+      data: {
+        type: IntegrationType.Gcalendar,
+        enabled: true,
+        userId: user.id,
+      },
+    });
+
+    await tx.googleCalendarIntegration.create({
+      data: {
+        email,
+        refreshToken,
+        accessToken,
+        integrationId: integration.id,
+      },
+    });
+
+    return serviceUtils.createSuccessResult('Google calendar added', undefined);
+  });
+}
+
+export async function disableGoogleCalendarIntegration(
+  userId: string,
+  integrationId: string
+): Promise<ServiceResult> {
+  const integration = await db.integration.findUnique({
+    where: { id: integrationId, userId, type: IntegrationType.Gcalendar },
+    include: { gCalendar: true },
+  });
+
+  if (!integration || !integration.gCalendar) {
+    return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.NotFound);
+  }
+
+  await db.integration.update({ where: { id: integration.id }, data: { enabled: false } });
+  return serviceUtils.createSuccessResult('Integration disabled', undefined);
+}
+
+export async function enableGoogleCalendarIntegration(
+  userId: string,
+  integrationId: string
+): Promise<ServiceResult> {
+  const integration = await db.integration.findUnique({
+    where: { id: integrationId, userId, type: IntegrationType.Gcalendar },
+    include: { gCalendar: true },
+  });
+
+  if (!integration || !integration.gCalendar) {
+    return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.NotFound);
+  }
+
+  await db.integration.update({ where: { id: integration.id }, data: { enabled: true } });
+  return serviceUtils.createSuccessResult('Integration enabled', undefined);
+}
+
+export async function deleteGoogleCalendarIntegration(
+  userId: string,
+  integrationId: string
+): Promise<ServiceResult> {
+  const integration = await db.integration.findUnique({
+    where: { id: integrationId, userId, type: IntegrationType.Gmail },
+    include: { gCalendar: true },
+  });
+
+  if (!integration || !integration.gCalendar) {
+    return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.NotFound);
+  }
+
+  const oauth = googleUtils.createOauthClient();
+  loggerUtils.debug('setting tokens...');
+
+  oauth.setCredentials({
+    access_token: integration.gCalendar.accessToken,
+    refresh_token: integration.gCalendar.refreshToken,
+  });
+
+  try {
+    // revoke tokens
+    loggerUtils.debug('revoking tokens...');
+    await googleUtils.revokeToken(integration.gCalendar.refreshToken);
+  } catch (error) {
+    loggerUtils.error('google service error', error);
+  }
+  loggerUtils.debug('cleaning from db...');
+  await db.integration.delete({ where: { id: integration.id } });
+
+  return serviceUtils.createSuccessResult('Integration removed', undefined);
 }
