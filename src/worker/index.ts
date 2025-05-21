@@ -8,7 +8,7 @@ import {
   InvokeAssistantJobData,
 } from '@/types/queue.type';
 import { actionService, integrationService, mailService } from '@/services';
-import { Message } from '@google-cloud/pubsub';
+import { Message, Topic } from '@google-cloud/pubsub';
 import { config } from '@/config';
 import { pubsub } from '@/lib/pubsub';
 
@@ -23,16 +23,26 @@ export function createBullMqWorker<T>(queueName: string, handler: BullMqWorkerHa
       await handler(job);
     },
     { connection: redis }
-  ).on('active', () => {
-    loggerUtils.info(`[${queueName}] processing new job`);
-  });
+  )
+    .on('active', () => {
+      loggerUtils.info(`[${queueName}] processing new job`);
+    })
+    .on('error', e => {
+      loggerUtils.error(`[${queueName}] encountered error`, { e });
+    })
+    .on('failed', (_, e) => {
+      loggerUtils.error(`[${queueName}] failed`, { e });
+    })
+    .on('completed', (_, result) => {
+      loggerUtils.info(`[${queueName}] completed`, { result });
+    });
 
   loggerUtils.info(`bullmq worker for ${queueName} is running`);
 }
 
 export function createPubSubWorker(topic: string, handler: PubSubWorkerHandler) {
   const sub = pubsub.subscription(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_SUB, {
-    flowControl: { maxMessages: 10 },
+    // topic: new Topic(pubsub, topic),
   });
 
   sub.on('message', handler);

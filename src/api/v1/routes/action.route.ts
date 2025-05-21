@@ -174,7 +174,9 @@ actionRouter.openapi(
   }),
 
   async c => {
-    const result = await actionService.streamAction('userId', 'actionId');
+    const user = c.get('user')!;
+
+    const result = await actionService.streamAction(user.id, c.req.param('actionId'));
 
     if (!result.ok) {
       return controllerUtils.createErrorResponse(c, result.message, 400);

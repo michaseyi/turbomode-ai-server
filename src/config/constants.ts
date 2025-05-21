@@ -51,6 +51,11 @@ export const messages = {
     BAD_REQUEST: 'Bad request',
     NOT_IMPLEMENTED: 'Not implemented',
   },
+
+  tools: {
+    NOT_CONFIGURED: 'This tool is not available for use because the user has not configured it.',
+    INVALID_CONTEXT: 'This tool is called in an invalid context.',
+  },
 };
 
 export const timeMs = {

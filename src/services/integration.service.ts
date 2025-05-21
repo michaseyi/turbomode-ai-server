@@ -261,6 +261,7 @@ export async function onGmailHistory(message: Message): Promise<ServiceResult> {
   try {
     data = integrationValidation.gmailPush.parse(JSON.parse(message.data.toString()));
     await gmailPubSubQueue.add('gmail-pubsub', data);
+    loggerUtils.info(`${data.historyId} from ${data.emailAddress}`);
     return serviceUtils.createSuccessResult('Gmail pubsub pushed to queue', undefined);
   } catch (error) {
     loggerUtils.info('pubsub received invalid message', { message: message.data.toString() });
@@ -362,7 +363,7 @@ export async function processGmailMessage(data: GmailMessageJobData): Promise<Se
   // if there are not instructions skip processing email? because of ambiguity?
   if (!integration.gmail.instruction.length) {
     loggerUtils.debug('skipping email - no instructions');
-    return serviceUtils.createSuccessResult('Skipping email message', undefined);
+    return serviceUtils.createSuccessResult('Skipped email message', undefined);
   }
 
   if (integration.gmail.emailProcessOption !== EmailProcessOption.All && parsedMessage.from) {
@@ -405,7 +406,7 @@ export async function addGoogleCalendarIntegration(
     return serviceUtils.createErrorResult('User does not exist', ServiceErrorCode.Bad);
   }
 
-  if (await db.integration.count({ where: { type: 'Gcalendar' } })) {
+  if (await db.integration.count({ where: { type: IntegrationType.Gcalendar, userId } })) {
     return serviceUtils.createErrorResult(
       'Google calendar already integreated',
       ServiceErrorCode.Bad
@@ -512,7 +513,7 @@ export async function deleteGoogleCalendarIntegration(
   integrationId: string
 ): Promise<ServiceResult> {
   const integration = await db.integration.findUnique({
-    where: { id: integrationId, userId, type: IntegrationType.Gmail },
+    where: { id: integrationId, userId, type: IntegrationType.Gcalendar },
     include: { gCalendar: true },
   });
 

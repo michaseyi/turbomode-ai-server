@@ -14,7 +14,7 @@ import {
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 
 import { config } from '@/config';
-import { baseTools } from '@/lib/tools';
+import { baseTools, googleTools } from '@/lib/tools';
 import {
   AIMessage,
   AIMessageChunk,
@@ -29,6 +29,8 @@ import { RunnableToolLike } from '@langchain/core/runnables';
 import { z } from 'zod';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { stdout } from 'process';
+import { db } from '@/lib/db';
+import { ConfigurationSchema } from '../configuration';
 
 const messages = [
   //   new SystemMessage(
@@ -82,7 +84,8 @@ const messages = [
   new SystemMessage(`
 
 # System Prompt: Autonomous Email Assistant (AVA)
-## Core Directive: You are to handle the user's incoming emails, identify actionable tasks, plan their execution, utilize available tools to complete them, and report on actions taken without any user interaction. You do not engage in conversation.
+## Core Directive: 
+You are to handle the user's incoming emails, identify actionable tasks, plan their execution, utilize available tools to complete them, and report on actions taken without any user interaction. You do not engage in conversation.
 
 you must always log the actions you take and the descisions you make. This is important for accountability and transparency.
 
@@ -236,7 +239,7 @@ function createAgent(params: CreateTurobModeAgentParams) {
   };
 
   const plannerNode = async (state: typeof StateAnnotation.State) => {
-    const plan = await plannerLLM.invoke(
+    const plan = plannerLLM.invoke(
       [
         state.messages[1],
         new SystemMessage(`
@@ -295,7 +298,7 @@ Note: 'Completed' means you have perfomed the step and marked it as done. 'Pendi
     };
   };
 
-  const graphBuilder = new StateGraph(StateAnnotation);
+  const graphBuilder = new StateGraph(StateAnnotation, ConfigurationSchema);
 
   graphBuilder
     .addNode('planner', plannerNode)
@@ -354,16 +357,17 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
     streaming: true,
 
     // model: 'mistral-saba-24b',
-    // model: 'qwen-qwq-32b',
-    model: 'gemma2-9b-it',
+    model: 'qwen-qwq-32b',
+    // model: 'gemma2-9b-it',
     // model: 'llama-3.1-8b-instant',
     temperature: 0.7,
-    maxTokens: 250,
+    maxTokens: 500,
     apiKey: config.env.GROQ_API_KEY,
   });
 
   const agent = createAgent({
-    tools: Object.values(baseTools),
+    tools: [...Object.values(baseTools), ...Object.values(googleTools)],
+    // tools: [],
     llm: llm,
     checkpointer,
   });
@@ -371,13 +375,66 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
   return agent;
 }
 
-// const assistant = await buildAssistant({});
+async function shout() {
+  const user = await db.user.findUnique({
+    where: { id: 'cmajz8zyy0000me65w70t1orv' },
+    include: {
+      integrations: {
+        include: {
+          gmail: true,
+          gCalendar: true,
+        },
+      },
+    },
+  });
 
-// const stream = await assistant.stream(
-//   { messages: messages },
-//   { configurable: { thread_id: 'adsfttt' } }
-// );
+  const context = {
+    gmail: {
+      messageId: '196dfaa05082e417',
+    },
+  };
 
-// for await (const s of stream) {
-//   console.log(s);
-// }
+  if (!user) {
+    console.log('user not found');
+    return;
+  }
+
+  const config = { configurable: { user, context, thread_id: '111888oo19779uu77' } };
+
+  // const b = await googleTools.createGmailLabel.invoke(
+  //   { labelName: 'To the F, to U, to the C, to the K' },
+  //   config
+  // );
+
+  // console.log(b);
+
+  // const a = await googleTools.listGmailLabels.invoke({}, config);
+
+  // console.log(a);
+
+  // const c = await googleTools.addCalenderEvent.invoke(
+  //   {
+  //     description: 'Dude you llm is cooking',
+  //     summary: 'We smart, no summary needed',
+  //     endTime: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
+  //     startTime: new Date().toISOString(),
+  //   },
+  //   config
+  // );
+
+  // console.log(c);
+
+  // const e = await googleTools.applyGmailLabel.invoke({ labelId: 'Label_1' }, config);
+
+  const assistant = await buildAssistant({});
+
+  const a = await assistant.invoke({});
+
+  const stream = await assistant.stream({ messages: messages }, config);
+
+  for await (const s of stream) {
+    console.log(s);
+  }
+}
+
+await shout();

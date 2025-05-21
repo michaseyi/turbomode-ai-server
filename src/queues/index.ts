@@ -15,7 +15,7 @@ export const emailQueue = new Queue<EmailJobData>('email', {
 export const gmailPubSubQueue = new Queue<GmailPubSubJobData>('gmail-pubsub-push', {
   connection: redis,
   defaultJobOptions: {
-    delay: timeMs.SECOND * 5, // allowing some time before polling gmail api for messages
+    delay: timeMs.SECOND * 0, // allowing some time before polling gmail api for messages
   },
 });
 

@@ -9,5 +9,10 @@ export const actionValidation = {
     updatedAt: z.date(),
   }),
 
+  createAction: z.object({
+    content: z.string().optional(),
+  }),
+
   actionMessage: z.object({ event: z.string(), data: z.string() }),
 };
+
