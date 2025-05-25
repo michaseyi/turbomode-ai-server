@@ -264,3 +264,238 @@ export const applyGmailLabel = tool(
     }),
   }
 );
+
+export const searchGmailMessages = tool(
+  async ({ query }, config) => {
+    const gmailIntegration = ensureConfiguration(config).user.integrations.find(
+      ({ type }) => type === IntegrationType.Gmail
+    )?.gmail;
+
+    if (!gmailIntegration) {
+      return {
+        success: false,
+        message: messages.tools.NOT_CONFIGURED,
+      };
+    }
+
+    const { accessToken, refreshToken } = gmailIntegration;
+
+    assert(accessToken, 'gmail integration must include accessToken');
+    assert(refreshToken, 'gmail integration must include refreshToken');
+
+    const oauthClient = googleUtils.createOauthClient();
+    oauthClient.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauthClient });
+
+    try {
+      const res = await gmail.users.messages.list({
+        userId: 'me',
+        q: query,
+        maxResults: 10,
+      });
+
+      const messages = await Promise.all(
+        (res.data.messages || []).map(async msg => {
+          const full = await gmail.users.messages.get({
+            userId: 'me',
+            id: msg.id!,
+            format: 'metadata',
+            metadataHeaders: ['From', 'Subject', 'Date'],
+          });
+
+          const headers = Object.fromEntries(
+            (full.data.payload?.headers || []).map(h => [h.name, h.value])
+          );
+
+          return {
+            messageId: msg.id,
+            threadId: msg.threadId,
+            from: headers['From'] || '',
+            subject: headers['Subject'] || '',
+            date: headers['Date'] || '',
+            snippet: full.data.snippet || '',
+          };
+        })
+      );
+
+      return {
+        success: true,
+        message: `Found ${messages.length} messages matching the query.`,
+        data: messages,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to search messages - ${typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'}`,
+      };
+    }
+  },
+  {
+    name: 'search_gmail_messages',
+    description: 'Search Gmail messages and return basic metadata (no body).',
+    schema: z.object({
+      query: z.string().describe(
+        `Gmail search query string using Gmail's advanced search syntax and normal text search.
+You can search for keywords in email subject, body, and sender fields.
+Examples:
+- "is:unread" to find unread emails
+- "from:example@gmail.com" to filter by sender
+- "subject:invoice" to filter by subject containing 'invoice'
+- "has:attachment" to find emails with attachments
+- "after:2023/01/01 before:2023/12/31" to search within date range
+- "meeting notes" to search for emails containing these words anywhere
+
+You can combine multiple terms with spaces, e.g. "is:unread from:boss@example.com meeting notes"`
+      ),
+    }),
+  }
+);
+
+export const getGmailMessageDetails = tool(
+  async ({ messageId }, config) => {
+    const gmailIntegration = ensureConfiguration(config).user.integrations.find(
+      ({ type }) => type === IntegrationType.Gmail
+    )?.gmail;
+
+    if (!gmailIntegration) {
+      return {
+        success: false,
+        message: messages.tools.NOT_CONFIGURED,
+      };
+    }
+
+    const { accessToken, refreshToken } = gmailIntegration;
+
+    assert(accessToken, 'gmail integration must include accessToken');
+    assert(refreshToken, 'gmail integration must include refreshToken');
+
+    const oauthClient = googleUtils.createOauthClient();
+    oauthClient.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauthClient });
+
+    try {
+      const full = await gmail.users.messages.get({
+        userId: 'me',
+        id: messageId,
+        format: 'full',
+      });
+
+      const parsed = googleUtils.parseGmailMessage(full.data);
+
+      return {
+        success: true,
+        message: 'Fetched full message details.',
+        data: parsed,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to fetch full message - ${typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'}`,
+      };
+    }
+  },
+  {
+    name: 'get_gmail_message_details',
+    description: 'Get full Gmail message including metadata and body.',
+    schema: z.object({
+      messageId: z.string().describe('Gmail message ID'),
+    }),
+  }
+);
+
+export const searchCalendarEvents = tool(
+  async ({ query, timeMin, timeMax }, config) => {
+    const gCalendarIntegration = ensureConfiguration(config).user.integrations.find(
+      ({ type }) => type === IntegrationType.Gcalendar
+    )?.gCalendar;
+
+    if (!gCalendarIntegration) {
+      return {
+        success: false,
+        message: messages.tools.NOT_CONFIGURED,
+      };
+    }
+
+    const { accessToken, refreshToken } = gCalendarIntegration;
+
+    assert(accessToken, 'gCalendar integration must include accessToken');
+    assert(refreshToken, 'gCalendar integration must include refreshToken');
+
+    const oauthClient = googleUtils.createOauthClient();
+    oauthClient.setCredentials({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauthClient });
+
+    try {
+      const res = await calendar.events.list({
+        calendarId: 'primary',
+        q: query,
+        timeMin: timeMin || new Date().toISOString(),
+        timeMax,
+        singleEvents: true,
+        orderBy: 'startTime',
+        maxResults: 10,
+      });
+
+      const events = (res.data.items || []).map(event => ({
+        id: event.id,
+        summary: event.summary,
+        description: event.description,
+        start: event.start?.dateTime || event.start?.date,
+        end: event.end?.dateTime || event.end?.date,
+        link: event.htmlLink,
+      }));
+
+      return {
+        success: true,
+        message: `Found ${events.length} event(s) matching the query.`,
+        data: events,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to search events - ${
+          typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'
+        }`,
+      };
+    }
+  },
+  {
+    name: 'search_calendar_events',
+    description: `
+      Searches for upcoming or past calendar events based on keywords and optional date range.
+      This tool should be used when the user wants to check scheduled events, see if something is already booked, or view reminders.
+      It searches in the event's title, description, and location using free text.
+    `,
+    schema: z.object({
+      query: z.string().describe(
+        `Free text to search for within calendar event titles, descriptions, or locations.
+Examples:
+- "doctor"
+- "meeting with Alex"
+- "gym session"`
+      ),
+      timeMin: z
+        .string()
+        .datetime()
+        .optional()
+        .describe(
+          `The start of the time range to search within (ISO 8601 format).
+If not provided, defaults to the current time. Example: "2025-05-25T00:00:00.000Z"`
+        ),
+      timeMax: z
+        .string()
+        .datetime()
+        .optional()
+        .describe(
+          `The end of the time range to search within (ISO 8601 format).
+Optional — omit to include all future events. Example: "2025-06-01T00:00:00.000Z"`
+        ),
+    }),
+  }
+);

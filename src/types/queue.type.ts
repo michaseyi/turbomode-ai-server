@@ -1,4 +1,5 @@
 import { integrationValidation } from '@/validation';
+import { BaseMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 
 export type EmailJobData = {
@@ -16,7 +17,15 @@ export type GmailMessageJobData = {
 
 export type InvokeAssistantJobData = {
   userId: string;
-  prompt: string;
+  prompt: BaseMessage;
+  context: Record<string, any>;
+};
+
+export type UserAssistantInvocationJobData = {
+  userId: string;
+  actionId: string;
+  prompt: BaseMessage;
+  context?: Record<string, any>;
 };
 
 export type GmailPushJobData = z.infer<typeof integrationValidation.gmailPush>;

@@ -1,3 +1,4 @@
+import { emailDataSourceTemplate } from '@/lib/assistant/prompts';
 import { db, EmailProcessOption, IntegrationType } from '@/lib/db';
 import { gmailMessageQueue, gmailPubSubQueue, invokeAgentQueue } from '@/queues';
 import { ServiceErrorCode, ServiceResult } from '@/types';
@@ -238,6 +239,23 @@ export async function getGmailIntegrations(
   );
 }
 
+export async function listIntegrations(
+  userId: string
+): Promise<ServiceResult<Array<z.infer<typeof integrationValidation.fetchedIntegrations>>>> {
+  const res = await db.integration.findMany({
+    where: { userId },
+    include: {
+      gmail: { select: { id: true, email: true } },
+      gCalendar: { select: { id: true, email: true } },
+    },
+  });
+
+  return serviceUtils.createSuccessResult(
+    'Integrations fetched',
+    integrationValidation.fetchedIntegrations.array().parse(res)
+  );
+}
+
 export async function getGoogleCalendarIntegrations(
   userId: string
 ): Promise<
@@ -386,10 +404,20 @@ export async function processGmailMessage(data: GmailMessageJobData): Promise<Se
     }
   }
 
+  const template = await emailDataSourceTemplate.invoke({
+    userInstruction: integration.gmail.instruction || '',
+    mail: JSON.stringify(parsedMessage),
+  });
+
   // invoke agent
   invokeAgentQueue.add('invoke-assistant', {
     userId: integration.user.id,
-    prompt: '', // build prompt from mail message, and user specific instructions
+    prompt: template.messages[0], // build prompt from mail message, and user specific instructions
+    context: {
+      gmail: {
+        messageId: data.messageId,
+      },
+    },
   });
 
   loggerUtils.info('done processing gmail action request');

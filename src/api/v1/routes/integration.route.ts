@@ -53,6 +53,37 @@ integrationRouter.openapi(
 
 integrationRouter.openapi(
   createRoute({
+    method: 'get',
+    path: '/',
+    description: 'Get integrations',
+    tags: ['Integration'],
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(
+              integrationValidation.fetchedIntegrations.array()
+            ),
+          },
+        },
+      },
+
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  integrationController.listIntegrations
+);
+
+integrationRouter.openapi(
+  createRoute({
     method: 'post',
     path: '/google-calendar',
     description: 'Create new google calendar integration',

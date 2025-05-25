@@ -1,6 +1,29 @@
 import { EmailProcessOption, IntegrationType } from '@prisma/client';
 import { z } from 'zod';
 
+const baseFetchedIntegration = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+const fetchedIntegrations = z
+  .union([
+    baseFetchedIntegration.extend({
+      type: z.literal(IntegrationType.Gcalendar),
+      gCalendar: z.object({
+        email: z.string().email(),
+      }),
+    }),
+    baseFetchedIntegration.extend({
+      type: z.literal(IntegrationType.Gmail),
+      gmail: z.object({
+        email: z.string().email(),
+      }),
+    }),
+  ])
+
 export const integrationValidation = {
   gmailPush: z.object({
     emailAddress: z.string().email(),
@@ -59,4 +82,6 @@ export const integrationValidation = {
   integrationBaseParams: z.object({
     integrationId: z.string(),
   }),
+
+  fetchedIntegrations,
 };

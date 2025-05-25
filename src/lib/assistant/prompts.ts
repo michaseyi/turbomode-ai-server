@@ -13,8 +13,25 @@ before you request a tool call, make sure you have previosully stated the intent
 
 The user has also spcfied some specific instruction below on what they want you to do.
 {userInstruction}
+
+
+The user recieved the mail below.
+{mail}
 `,
   ],
 ]);
 
-export const b = ChatPromptTemplate.fromMessages([new MessagesPlaceholder('plan')]);
+export const userInvokedTemplate = ChatPromptTemplate.fromMessages([
+  [
+    'system',
+    `You are a highly capable AI assistant. Be clear, concise, and helpful in your responses. 
+Use the available tools when it enhances accuracy or usefulness. 
+Always explain your reasoning when helpful, and guide the user step-by-step for complex tasks. 
+If a task can be automated using tools, proactively do so. 
+Avoid unnecessary elaboration or repetition. 
+Be polite but direct — prioritize usefulness over pleasantries.
+
+System time: {systemTime}
+`,
+  ],
+]);

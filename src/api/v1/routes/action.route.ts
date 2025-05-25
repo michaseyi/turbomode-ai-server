@@ -49,6 +49,34 @@ actionRouter.openapi(
   createRoute({
     method: 'post',
     path: '/',
+    description: 'Create action',
+    tags: ['Action'],
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(actionValidation.createdActionSchema),
+          },
+        },
+      },
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  actionController.createAction
+);
+
+actionRouter.openapi(
+  createRoute({
+    method: 'post',
+    path: '/',
     description: 'Create new action',
     tags: ['Action'],
     request: {
@@ -145,9 +173,12 @@ actionRouter.openapi(
   createRoute({
     method: 'get',
     path: '/:actionId/stream',
-    description: 'Delete action',
+    description: 'Stream action',
     tags: ['Action'],
-    request: {},
+    request: {
+      params: actionValidation.paramSchema,
+      query: actionValidation.streamQuery,
+    },
     responses: {
       200: {
         description: '',
@@ -161,7 +192,6 @@ actionRouter.openapi(
           },
         },
       },
-
       400: {
         description: '',
         content: {
@@ -173,25 +203,37 @@ actionRouter.openapi(
     },
   }),
 
-  async c => {
-    const user = c.get('user')!;
+  actionController.streamAction
+);
 
-    const result = await actionService.streamAction(user.id, c.req.param('actionId'));
+actionRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/:actionId/history',
+    description: 'Get action message history',
+    tags: ['Action'],
+    request: {
+      params: actionValidation.paramSchema,
+    },
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(actionValidation.chatMessage.array()),
+          },
+        },
+      },
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
 
-    if (!result.ok) {
-      return controllerUtils.createErrorResponse(c, result.message, 400);
-    }
-
-    if (typeof result.data === 'boolean') {
-      return controllerUtils.createSuccessWithoutDataResponse(c, result.message, 200);
-    }
-
-    const messageStream = result.data;
-
-    return streamSSE(c, async stream => {
-      for await (const message of messageStream) {
-        stream.writeSSE(message);
-      }
-    });
-  }
+  actionController.fetchActionMessageHistory
 );

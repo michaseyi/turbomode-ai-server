@@ -179,3 +179,15 @@ export async function getGoogleCalendarIntegration(c: Context) {
 
   return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
 }
+
+export async function listIntegrations(c: Context) {
+  const user = c.get('user')!;
+
+  const result = await integrationService.listIntegrations(user.id);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}

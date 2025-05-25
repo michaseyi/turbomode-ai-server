@@ -115,6 +115,9 @@ enum ActionMessageSource {
 model ActionMessage {
   id String @id @default(cuid())
   source ActionMessageSource
+  content String
+  nextId String
   actionId String
   action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
 }
+

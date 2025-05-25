@@ -5,6 +5,7 @@ import {
   GmailMessageJobData,
   GmailPushJobData as GmailPubSubJobData,
   InvokeAssistantJobData,
+  UserAssistantInvocationJobData,
 } from '@/types/queue.type';
 import { Queue } from 'bullmq';
 
@@ -26,3 +27,10 @@ export const gmailMessageQueue = new Queue<GmailMessageJobData>('gmail-message',
 export const invokeAgentQueue = new Queue<InvokeAssistantJobData>('invoke-assistant', {
   connection: redis,
 });
+
+export const userAssistantInvocationQueue = new Queue<UserAssistantInvocationJobData>(
+  'user-assistant-invocation',
+  {
+    connection: redis,
+  }
+);

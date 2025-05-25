@@ -6,11 +6,14 @@ import {
   GmailMessageJobData,
   GmailPushJobData,
   InvokeAssistantJobData,
+  UserAssistantInvocationJobData,
 } from '@/types/queue.type';
 import { actionService, integrationService, mailService } from '@/services';
 import { Message, Topic } from '@google-cloud/pubsub';
 import { config } from '@/config';
 import { pubsub } from '@/lib/pubsub';
+import { startAgentStream } from '@/lib/stream-helper';
+import { timeMs } from '@/config/constants';
 
 type BullMqWorkerHandler<T> = (job: { data: T }) => Promise<any>;
 
@@ -57,11 +60,15 @@ createBullMqWorker<GmailMessageJobData>('gmail-message', job =>
 createBullMqWorker<EmailJobData>('email', job => mailService.send(job.data));
 
 createBullMqWorker<InvokeAssistantJobData>('invoke-assistant', job =>
-  actionService.invokeBgAssistant(job.data)
+  actionService.invokeAssistant(job.data)
 );
 
 createBullMqWorker<GmailPushJobData>('gmail-pubsub-push', job =>
   integrationService.processGmailHistory(job.data)
 );
 
-createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);
+createBullMqWorker<UserAssistantInvocationJobData>('user-assistant-invocation', job =>
+  actionService.requestCompletion(job.data)
+);
+
+// createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);
