@@ -616,13 +616,11 @@ export async function syncGoogleCalendarEventsForMonth(
   userId: string,
   integrationId: string,
   data: z.infer<typeof integrationValidation.fetchCalendarEventQuery>
-) {
+): Promise<ServiceResult> {
   const integration = await db.integration.findUnique({
-    where: { id: integrationId, userId },
+    where: { id: integrationId, userId, type: IntegrationType.Gcalendar },
     include: { gCalendar: true },
   });
-
-  const { date: month } = data;
 
   if (!integration?.gCalendar) {
     return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.Bad);
@@ -635,6 +633,8 @@ export async function syncGoogleCalendarEventsForMonth(
   oauth2Client.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
 
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  const { date: month } = data;
 
   const startOfMonth = moment(month).startOf('month');
   const endOfMonth = moment(month).endOf('month');

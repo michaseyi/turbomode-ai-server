@@ -1,5 +1,5 @@
 import { timeMs } from '@/config/constants';
-import { titleTemplatge, userInvokedTemplate } from '@/lib/assistant/prompts';
+import { titleTemplatge as titleTemplate, userInvokedTemplate } from '@/lib/assistant/prompts';
 import { buildAssistant, llm } from '@/lib/assistant/v1';
 import { ActionTrigger, db } from '@/lib/db';
 import { getAgentStream, startAgentStream } from '@/lib/stream-helper';
@@ -52,7 +52,6 @@ export async function invokeAssistant(data: InvokeAssistantJobData) {
 
   const { userId, prompt, context } = data;
 
-  // create email action
   const action = await db.action.create({
     data: {
       trigger: ActionTrigger.DataSource,
@@ -63,8 +62,6 @@ export async function invokeAssistant(data: InvokeAssistantJobData) {
   });
 
   loggerUtils.debug('invoking assistant with prompt');
-
-  const { push, cleanup } = await startAgentStream(userId, action.id);
 
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -85,6 +82,8 @@ export async function invokeAssistant(data: InvokeAssistantJobData) {
       thread_id: action.id,
     },
   };
+
+  const { push, cleanup } = await startAgentStream(userId, action.id);
 
   const stream = await assistant.stream({ messages: [prompt] }, config);
 
@@ -144,7 +143,6 @@ export async function requestCompletion(data: UserAssistantInvocationJobData) {
 
   const { push, cleanup } = await startAgentStream(userId, actionId);
 
-  console.log('stream started');
   const stream = await assistant.stream(
     { messages: [prompt] },
     { streamMode: 'messages', ...config }
@@ -197,12 +195,12 @@ export async function requestCompletionDirect(
 
   const action = (await db.action.findUnique({ where: { id: actionId, userId } }))!;
 
-  console.log('stream started');
+  loggerUtils.debug('stream started', { actionId });
 
-  async function* generator() {
+  async function* streamCreator() {
     if (action.title === 'New Action') {
       const out = await llm.invoke(
-        (await titleTemplatge.invoke({ userMessage: prompt.content })).messages
+        (await titleTemplate.invoke({ userMessage: prompt.content })).messages
       );
 
       await db.action.update({
@@ -211,8 +209,6 @@ export async function requestCompletionDirect(
           title: out.content.toString(),
         },
       });
-
-      console.log(out);
 
       yield {
         event: 'message',
@@ -233,8 +229,6 @@ export async function requestCompletionDirect(
 
       if (chunk instanceof AIMessageChunk) {
         if (chunk.tool_calls && chunk.tool_calls.length > 0) {
-          console.log(chunk.tool_calls);
-
           yield {
             event: 'message',
             data: JSON.stringify({
@@ -246,7 +240,6 @@ export async function requestCompletionDirect(
         const content = chunk.content.toString();
 
         if (content.length) {
-          stdout.write(content);
           yield {
             event: 'message',
             data: JSON.stringify({ chunk: content }),
@@ -256,11 +249,9 @@ export async function requestCompletionDirect(
     }
 
     yield { event: 'message', data: JSON.stringify({ done: true }) };
-
-    console.log('done');
   }
 
-  return generator();
+  return streamCreator();
 }
 
 function extractContent(message: BaseMessage): string {

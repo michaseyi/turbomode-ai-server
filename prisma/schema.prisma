@@ -61,7 +61,7 @@ model GmailIntegration {
   accessToken String
   refreshToken String
   instruction String
-
+  lastHistoryId String?
   emailProcessOption EmailProcessOption @default(All)
   specificAddresses String? // used in conjuction with emailProcssingOption
   messages GmailMessage[]
