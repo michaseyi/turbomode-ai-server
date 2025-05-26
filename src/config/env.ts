@@ -25,6 +25,7 @@ const envConfigSchema = z.object({
 
   REQUEST_TIMEOUT: z.coerce.number().default(60000),
   GROQ_API_KEY: z.string(),
+  TAVILY_API_KEY: z.string(),
 
   FRONTEND_URL: z.string(),
 });
@@ -48,6 +49,5 @@ export const env = envConfigSchema.parse({
   GOOGLE_PUBSUB_INCOMING_MAIL_SUB: process.env.GOOGLE_PUBSUB_INCOMING_MAIL_SUB,
   GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC: process.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC,
   FRONTEND_URL: process.env.FRONTEND_URL,
+  TAVILY_API_KEY: process.env.TAVILY_API_KEY,
 });
-
-

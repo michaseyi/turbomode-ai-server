@@ -5,7 +5,9 @@ import {
   ModifyGmailIntegrationPayload,
 } from '@/types/integration.type';
 import { controllerUtils } from '@/utils';
+import { integrationValidation } from '@/validation';
 import { Context } from 'hono';
+import { z } from 'zod';
 
 export async function addGmailIntegration(
   c: Context<{}, any, { out: { json: AddGoogleIntegrationPayload } }>
@@ -184,6 +186,57 @@ export async function listIntegrations(c: Context) {
   const user = c.get('user')!;
 
   const result = await integrationService.listIntegrations(user.id);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}
+
+export async function fetchCalendarEvent(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.integrationBaseParams>;
+        query: z.infer<typeof integrationValidation.fetchCalendarEventQuery>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { integrationId } = c.req.valid('param');
+  const query = c.req.valid('query');
+  const result = await integrationService.fetchCalendarEvents(user.id, integrationId, query);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}
+export async function syncCalendarEvent(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.integrationBaseParams>;
+        json: z.infer<typeof integrationValidation.fetchCalendarEventQuery>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { integrationId } = c.req.valid('param');
+  const body = c.req.valid('json');
+  const result = await integrationService.syncGoogleCalendarEventsForMonth(
+    user.id,
+    integrationId,
+    body
+  );
 
   if (!result.ok) {
     return controllerUtils.createErrorResponse(c, result.message, 400);

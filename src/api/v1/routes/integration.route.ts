@@ -347,3 +347,78 @@ integrationRouter.openapi(
   }),
   integrationController.disableGmailIntegration
 );
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/google-calendar/:integrationId/events',
+    description: 'Get canendar events',
+    tags: ['Integration'],
+    request: {
+      query: integrationValidation.fetchCalendarEventQuery,
+      params: integrationValidation.integrationBaseParams,
+    },
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(
+              integrationValidation.fetchedCalendarEvent.array()
+            ),
+          },
+        },
+      },
+
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  integrationController.fetchCalendarEvent
+);
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'post',
+    path: '/google-calendar/:integrationId/sync',
+    description: 'Sync calendar events',
+    tags: ['Integration'],
+    request: {
+      required: true,
+      body: {
+        content: {
+          'application/json': {
+            schema: integrationValidation.fetchCalendarEventQuery,
+          },
+        },
+      },
+      params: integrationValidation.integrationBaseParams,
+    },
+    responses: {
+      200: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+
+      400: {
+        description: '',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiErrorResponse,
+          },
+        },
+      },
+    },
+  }),
+  integrationController.syncCalendarEvent
+);

@@ -64,6 +64,7 @@ model GmailIntegration {
 
   emailProcessOption EmailProcessOption @default(All)
   specificAddresses String? // used in conjuction with emailProcssingOption
+  messages GmailMessage[]
 
   processAttachment Boolean @default(false)
   processThreadHistory Boolean @default(false)
@@ -73,7 +74,7 @@ model GoogleCalendarIntegration{
   id   String @id @default(cuid())
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   integrationId String @unique
-
+  events CalendarEvent[]
   email String @unique
   accessToken String
   refreshToken String
@@ -120,4 +121,48 @@ model ActionMessage {
   actionId String
   action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
 }
+
+model CalendarEvent {
+  id          String   @id @default(cuid()) 
+  eventId     String   @unique              
+  calendarId  String   @default("primary")  
+  gCalendarIntegrationId String
+  gCalendarIntegration GoogleCalendarIntegration @relation(fields: [gCalendarIntegrationId], references: [id], onDelete: Cascade)
+  summary     String?                       
+  description String?                       
+  location    String?                       
+  startTime   DateTime                    
+  endTime     DateTime                    
+  createdAt   DateTime   @default(now())  
+  updatedAt   DateTime   @updatedAt       
+  status      String?                     
+  htmlLink    String?                     
+
+  @@index([eventId])
+}
+
+
+model GmailMessage {
+  id            String   @id @default(cuid())     
+  messageId     String   @unique                   
+  threadId      String?                            
+  labelIds      String[]   @default([])            
+  snippet       String?                            
+  internalDate  DateTime                           
+  from          String?                            
+  to            String[]   @default([])            
+  cc            String[]   @default([])            
+  bcc           String[]   @default([])            
+  subject       String?                            
+  body          String?                            
+  isUnread      Boolean   @default(true)           
+  gmailIntegrationId String 
+  gmailIntegration GmailIntegration @relation(fields: [gmailIntegrationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())         
+  updatedAt     DateTime   @updatedAt              
+
+  @@index([messageId])
+  @@index([threadId])
+}
+
 

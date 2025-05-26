@@ -1,6 +1,6 @@
 import { timeMs } from '@/config/constants';
-import { userInvokedTemplate } from '@/lib/assistant/prompts';
-import { buildAssistant } from '@/lib/assistant/v1';
+import { titleTemplatge, userInvokedTemplate } from '@/lib/assistant/prompts';
+import { buildAssistant, llm } from '@/lib/assistant/v1';
 import { ActionTrigger, db } from '@/lib/db';
 import { getAgentStream, startAgentStream } from '@/lib/stream-helper';
 import { userAssistantInvocationQueue } from '@/queues';
@@ -86,7 +86,35 @@ export async function invokeAssistant(data: InvokeAssistantJobData) {
     },
   };
 
-  assistant.invoke({ messages: [] }, config);
+  const stream = await assistant.stream({ messages: [prompt] }, config);
+
+  for await (const update of stream) {
+    const chunk = update[0];
+
+    if (chunk instanceof AIMessageChunk) {
+      const content = chunk.content.toString();
+      if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+        console.log(chunk.tool_calls);
+
+        push({
+          event: 'message',
+          data: JSON.stringify({
+            status: true,
+            chunk: `Calling ${chunk.tool_calls.map(c => c.name).join(', ')} ...`,
+          }),
+        });
+      }
+
+      if (content.length) {
+        await push({
+          event: 'chunk',
+          data: content,
+        });
+      }
+    }
+  }
+
+  await push({ event: 'done', data: '' });
 
   await cleanup();
   await db.action.update({ where: { id: action.id }, data: { active: false } });
@@ -167,16 +195,54 @@ export async function requestCompletionDirect(
     },
   };
 
-  const stream = await assistant.stream(
-    { messages: [prompt] },
-    { streamMode: 'messages', ...config, signal }
-  );
+  const action = (await db.action.findUnique({ where: { id: actionId, userId } }))!;
+
+  console.log('stream started');
 
   async function* generator() {
+    if (action.title === 'New Action') {
+      const out = await llm.invoke(
+        (await titleTemplatge.invoke({ userMessage: prompt.content })).messages
+      );
+
+      await db.action.update({
+        where: { userId, id: actionId },
+        data: {
+          title: out.content.toString(),
+        },
+      });
+
+      console.log(out);
+
+      yield {
+        event: 'message',
+        data: JSON.stringify({
+          title: true,
+          chunk: out.content.toString(),
+        }),
+      };
+    }
+
+    const stream = await assistant.stream(
+      { messages: [prompt] },
+      { streamMode: 'messages', ...config, signal }
+    );
+
     for await (const update of stream) {
       const chunk = update[0];
 
       if (chunk instanceof AIMessageChunk) {
+        if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+          console.log(chunk.tool_calls);
+
+          yield {
+            event: 'message',
+            data: JSON.stringify({
+              status: true,
+              chunk: `Calling ${chunk.tool_calls.map(c => c.name).join(', ')} ...`,
+            }),
+          };
+        }
         const content = chunk.content.toString();
 
         if (content.length) {

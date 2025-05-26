@@ -12,6 +12,7 @@ import { googleUtils, loggerUtils, serviceUtils } from '@/utils';
 import { integrationValidation } from '@/validation';
 import { Message } from '@google-cloud/pubsub';
 import { google } from 'googleapis';
+import moment from 'moment';
 import { z } from 'zod';
 
 export async function addGmailIntegration(
@@ -568,4 +569,114 @@ export async function deleteGoogleCalendarIntegration(
   await db.integration.delete({ where: { id: integration.id } });
 
   return serviceUtils.createSuccessResult('Integration removed', undefined);
+}
+
+export async function fetchCalendarEvents(
+  userId: string,
+  integrationId: string,
+  data: z.infer<typeof integrationValidation.fetchCalendarEventQuery>
+): Promise<ServiceResult<Array<z.infer<typeof integrationValidation.fetchedCalendarEvent>>>> {
+  const { date: month } = data;
+  const start = moment(month).startOf('month');
+  const end = moment(month).endOf('month');
+
+  const integration = await db.integration.findUnique({
+    where: { userId, id: integrationId },
+    include: {
+      gCalendar: {
+        include: {
+          events: {
+            where: {
+              startTime: {
+                gte: start.toDate(),
+                lte: end.toDate(),
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const events = integration?.gCalendar?.events;
+
+  if (!events) {
+    return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.Bad);
+  }
+
+  const tranformedEvents = [...events];
+
+  return serviceUtils.createSuccessResult(
+    'Events fetched',
+    integrationValidation.fetchedCalendarEvent.array().parse(tranformedEvents)
+  );
+}
+
+export async function syncGoogleCalendarEventsForMonth(
+  userId: string,
+  integrationId: string,
+  data: z.infer<typeof integrationValidation.fetchCalendarEventQuery>
+) {
+  const integration = await db.integration.findUnique({
+    where: { id: integrationId, userId },
+    include: { gCalendar: true },
+  });
+
+  const { date: month } = data;
+
+  if (!integration?.gCalendar) {
+    return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.Bad);
+  }
+
+  const oauth2Client = googleUtils.createOauthClient();
+
+  const { accessToken, refreshToken } = integration.gCalendar;
+
+  oauth2Client.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  const startOfMonth = moment(month).startOf('month');
+  const endOfMonth = moment(month).endOf('month');
+
+  const res = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin: startOfMonth.toISOString(),
+    timeMax: endOfMonth.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime',
+    maxResults: 100,
+  });
+
+  const events = res.data.items || [];
+
+  for (const event of events) {
+    if (!event.id || !event.start?.dateTime || !event.end?.dateTime) continue;
+
+    await db.calendarEvent.upsert({
+      where: { eventId: event.id },
+      update: {
+        summary: event.summary ?? '',
+        description: event.description ?? '',
+        startTime: new Date(event.start.dateTime),
+        endTime: new Date(event.end.dateTime),
+        location: event.location ?? '',
+        htmlLink: event.htmlLink ?? '',
+        status: event.status ?? '',
+      },
+      create: {
+        gCalendarIntegrationId: integration.gCalendar.id,
+        eventId: event.id,
+        summary: event.summary ?? '',
+        description: event.description ?? '',
+        startTime: new Date(event.start.dateTime),
+        endTime: new Date(event.end.dateTime),
+        location: event.location ?? '',
+        htmlLink: event.htmlLink ?? '',
+        status: event.status ?? '',
+      },
+    });
+  }
+
+  return serviceUtils.createSuccessResult('Calendar synced', undefined);
 }

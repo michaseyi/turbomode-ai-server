@@ -24,7 +24,7 @@ export const getAction = apiUtils.buildRouteHandler({
   fetchOptions: user => ({ userId: user.id }),
 });
 
-export async function streamAction(
+export async function streamAction2(
   c: Context<
     any,
     any,
@@ -61,6 +61,65 @@ export async function streamAction(
   return streamSSE(c, async stream => {
     for await (const message of messageStream) {
       await stream.writeSSE(message);
+    }
+  });
+}
+
+export async function streamAction(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        query: z.infer<typeof actionValidation.streamQuery>;
+        param: z.infer<typeof actionValidation.paramSchema>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { actionId } = c.req.valid('param');
+  const query = c.req.valid('query');
+
+  const result = await actionService.streamAction(
+    user.id,
+    actionId,
+    query.prompt || null,
+    c.req.raw.signal
+  );
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  if (typeof result.data === 'boolean') {
+    return controllerUtils.createSuccessWithoutDataResponse(c, result.message, 200);
+  }
+
+  const messageStream = result.data;
+
+  return streamSSE(c, async stream => {
+    const pingInterval = 3_000; // 3 seconds
+    let isClosed = false;
+
+    const pingTimer = setInterval(async () => {
+      console.log('nice');
+      if (!isClosed) {
+        try {
+          await stream.write(`:ping\n\n`);
+        } catch (e) {
+          clearInterval(pingTimer);
+        }
+      }
+    }, pingInterval);
+
+    try {
+      for await (const message of messageStream) {
+        await stream.writeSSE(message);
+      }
+    } finally {
+      isClosed = true;
+      clearInterval(pingTimer);
     }
   });
 }

@@ -35,3 +35,13 @@ System time: {systemTime}
 `,
   ],
 ]);
+
+export const titleTemplatge = ChatPromptTemplate.fromMessages([
+  [
+    'system',
+    `Generate a concise and catchy chat title based on the following user message, your response should only be the generated title
+
+{userMessage}
+    `,
+  ],
+]);

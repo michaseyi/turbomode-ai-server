@@ -71,4 +71,4 @@ createBullMqWorker<UserAssistantInvocationJobData>('user-assistant-invocation', 
   actionService.requestCompletion(job.data)
 );
 
-// createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);
+createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);

@@ -15,7 +15,7 @@ import {
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 
 import { config } from '@/config';
-import { baseTools, googleTools } from '@/lib/tools';
+import { baseTools, commonTools, googleTools, userTools } from '@/lib/tools';
 import {
   AIMessage,
   AIMessageChunk,
@@ -183,14 +183,14 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
   await checkpointer.setup();
 
   const llm = new ChatGroq({
-    // streaming: true,
+    streaming: true,
 
     // model: 'mistral-saba-24b',
     model: 'qwen-qwq-32b',
     // model: 'gemma2-9b-it',
     // model: 'llama-3.1-8b-instant',
-    temperature: 0.7,
-    maxTokens: 2000,
+    // temperature: 0.7,
+    // maxTokens: 2000,
     apiKey: config.env.GROQ_API_KEY,
   });
 
@@ -200,7 +200,12 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
     checkpointer,
   });
 
-  const tools = [...Object.values(baseTools), ...Object.values(googleTools)];
+  const tools = [
+    ...Object.values(baseTools),
+    ...Object.values(googleTools),
+    ...Object.values(userTools),
+    ...Object.values(commonTools),
+  ];
 
   return createReactAgent({
     llm: llm.bindTools(tools),
@@ -211,74 +216,8 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
   // return agent;
 }
 
-async function shout() {
-  const user = await db.user.findUnique({
-    where: { id: 'cmava97ma0000megec8ku3zge' },
-    include: {
-      integrations: {
-        include: {
-          gmail: true,
-          gCalendar: true,
-        },
-      },
-    },
-  });
-
-  const context = {
-    gmail: {
-      messageId: '196dfaa05082e417',
-    },
-  };
-
-  if (!user) {
-    console.log('user not found');
-    return;
-  }
-
-  const config = { configurable: { user, context, thread_id: '1234567' } };
-
-  // const b = await googleTools.createGmailLabel.invoke(
-  //   { labelName: 'To the F, to U, to the C, to the K' },
-  //   config
-  // );
-
-  // console.log(b);
-
-  // const a = await googleTools.listGmailLabels.invoke({}, config);
-
-  // console.log(a);
-
-  // const c = await googleTools.addCalenderEvent.invoke(
-  //   {
-  //     description: 'Dude you llm is cooking',
-  //     summary: 'We smart, no summary needed',
-  //     endTime: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
-  //     startTime: new Date().toISOString(),
-  //   },
-  //   config
-  // );
-
-  // console.log(c);
-
-  // const e = await googleTools.applyGmailLabel.invoke({ labelId: 'Label_1' }, config);
-
-  const assistant = await buildAssistant({});
-
-  // const a = await assistant.invoke({});
-
-  for await (const event of assistant.streamEvents(
-    { messages: messages },
-    { version: 'v2', configurable: config.configurable }
-  )) {
-    const kind = event.event;
-    if (kind.includes('chat_model_start')) {
-      console.log(kind, event.name, event);
-    }
-    if (kind.includes('chat_model_stream')) {
-      console.log(kind, event.name, event);
-    }
-    // console.log(kind, ' =====================', event.name,);
-  }
-}
-
-// await shout();
+export const llm = new ChatGroq({
+  // model: 'llama-3.1-8b-instant',
+  model: 'gemma2-9b-it',
+  apiKey: config.env.GROQ_API_KEY,
+});
