@@ -83,7 +83,7 @@ export async function deleteNote(userId: string, noteId: string): Promise<Servic
     return serviceUtils.createErrorResult('Note not found', ServiceErrorCode.NotFound);
   }
 
-  db.$transaction(async tx => {
+  await db.$transaction(async tx => {
     await tx.note.delete({ where: { id: note.id, userId } });
     await notesVectorStore.delete({ ids: [note.id] });
   });
@@ -91,8 +91,23 @@ export async function deleteNote(userId: string, noteId: string): Promise<Servic
   return serviceUtils.createSuccessResult('Note deleted', undefined);
 }
 
-function formatNoteContent(content: any): string {
-  return JSON.stringify(content);
+function formatNoteContent(blocks: any): string {
+  function formatBlock(block: any): string {
+    const contents = block.content;
+
+    const out = contents
+      .filter(content => content.type === 'text')
+      .map(content => content.text)
+      .join(' ');
+
+    return out;
+  }
+
+  const out = blocks
+    .filter(block => 'content' in block)
+    .map(formatBlock)
+    .join(' ');
+  return out;
 }
 
 export async function indexNoteJob(data: IndexNoteJobData) {
@@ -105,12 +120,15 @@ export async function indexNoteJob(data: IndexNoteJobData) {
   if (!note) {
     throw new Error('Note not found');
   }
+
   const content = formatNoteContent(note.content);
+
+  console.log(content);
 
   await db.note.update({
     where: { userId, id: noteId },
     data: {
-      snippet: content.substring(0, 20),
+      snippet: content.substring(0, 200),
     },
   });
 
@@ -128,7 +146,7 @@ export async function indexNoteJob(data: IndexNoteJobData) {
     },
     id: note.id,
   };
-  
+
   await notesVectorStore.addDocuments([document]);
 
   return serviceUtils.createSuccessResult('Note indexed', undefined);

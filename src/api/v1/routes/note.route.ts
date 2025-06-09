@@ -121,3 +121,27 @@ noteRouter.openapi(
   }),
   noteController.updateNote
 );
+
+noteRouter.openapi(
+  createRoute({
+    method: 'delete',
+    path: '/{noteId}',
+    description: 'Delete a note',
+    tags: ['Note'],
+    request: {
+      params: userValidation.noteParamSchema,
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  noteController.deleteNote
+);

@@ -92,3 +92,26 @@ export async function fetchNote(
 
   return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
 }
+
+export async function deleteNote(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof userValidation.noteParamSchema>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { noteId } = c.req.valid('param');
+
+  const result = await noteService.deleteNote(user.id, noteId);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessWithoutDataResponse(c, result.message, 200);
+}
