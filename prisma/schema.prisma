@@ -32,6 +32,7 @@ model User {
   isEmailVerified Boolean       @default(false)
   integrations    Integration[]
   actions Action[]
+  notes Note[]
 }
 
 model Integration {
@@ -166,3 +167,20 @@ model GmailMessage {
 }
 
 
+
+
+
+model Note {
+  id String @id @unique @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title String
+  snippet String?
+  tags String[]
+  content Json // todo: switch to tables later
+  archived Boolean @default(false)
+  pinned Boolean @default(false)
+  favorite Boolean @default(false)
+  createdAt     DateTime   @default(now())         
+  updatedAt     DateTime   @updatedAt              
+}

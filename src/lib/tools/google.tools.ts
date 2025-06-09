@@ -6,6 +6,7 @@ import { google } from 'googleapis';
 import assert from 'node:assert';
 import { z } from 'zod';
 import { ensureConfiguration } from '../assistant/configuration';
+import { gmail } from 'googleapis/build/src/apis/gmail';
 
 export const addCalenderEvent = tool(
   async ({ description, startTime, endTime, summary }, config) => {
@@ -292,7 +293,7 @@ export const searchGmailMessages = tool(
       const res = await gmail.users.messages.list({
         userId: 'me',
         q: query,
-        maxResults: 10,
+        maxResults: 20,
       });
 
       const messages = await Promise.all(
@@ -497,5 +498,84 @@ If not provided, defaults to the current time. Example: "2025-05-25T00:00:00.000
 Optional — omit to include all future events. Example: "2025-06-01T00:00:00.000Z"`
         ),
     }),
+  }
+);
+
+export const sendGmailMessage = tool(
+  async ({ to, body, subject, threadId }, config) => {
+    const _ = ensureConfiguration(config);
+
+    const gmailIntegration = _.user.integrations.find(({ type }) => type === IntegrationType.Gmail);
+
+    if (!gmailIntegration || !gmailIntegration.gmail) {
+      return {
+        success: false,
+        message: messages.tools.NOT_CONFIGURED,
+      };
+    }
+
+    const oauthClient = googleUtils.createOauthClient();
+
+    const { accessToken, refreshToken } = gmailIntegration.gmail;
+
+    assert(accessToken, 'gmail integration must include accessToken');
+    assert(refreshToken, 'gmail integration must include refreshToken');
+
+    oauthClient.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauthClient });
+
+    try {
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          threadId,
+          raw: googleUtils.createRawEmail({
+            to,
+            from: gmailIntegration.gmail.email,
+            body,
+            subject,
+          }),
+        },
+      });
+
+      loggerUtils.info(`Email sent to ${to} with subject "${subject}"`);
+
+      return {
+        success: true,
+        message: `Email sent successfully to ${to}`,
+        data: { messageId: res.data.id },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to send email - ${
+          typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'
+        }`,
+      };
+    }
+  },
+  {
+    name: 'send_gmail_message',
+    schema: z.object({
+      to: z.string().email().describe('Recipient email address'),
+      subject: z.string().describe('Email subject line'),
+      body: z.string().describe('Email body content in plain text or HTML format'),
+      threadId: z
+        .string()
+        .optional()
+        .describe('Optional thread ID to reply to an existing email, '),
+    }),
+
+    description: `
+      Sends an email using the user's Gmail account.
+      This tool should be used when the user wants to send an email to someone.
+      It requires the recipient's email address, subject, and body content.
+      The body can be plain text or HTML.
+
+      You can pass in the 'threadId' to reply to an existing email thread.
+      If 'threadId' is provided, the email will be sent as a reply to that thread.
+      If 'threadId' is not provided, a new email will be created.
+    `,
   }
 );

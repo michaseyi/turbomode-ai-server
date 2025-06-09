@@ -27,6 +27,10 @@ const envConfigSchema = z.object({
   GROQ_API_KEY: z.string(),
   TAVILY_API_KEY: z.string(),
 
+  PINECONE_API_KEY: z.string(),
+
+  QDRANT_URL: z.string(),
+
   FRONTEND_URL: z.string(),
 });
 
@@ -50,4 +54,6 @@ export const env = envConfigSchema.parse({
   GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC: process.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC,
   FRONTEND_URL: process.env.FRONTEND_URL,
   TAVILY_API_KEY: process.env.TAVILY_API_KEY,
+  PINECONE_API_KEY: process.env.PINECONE_API_KEY,
+  QDRANT_URL: process.env.QDRANT_URL,
 });

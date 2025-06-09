@@ -6,3 +6,4 @@ export * as loggerUtils from '@/utils/logger.utils';
 export * as apiUtils from '@/utils/api.utils';
 export * as googleUtils from '@/utils/google.utils';
 export * as dbUtils from '@/utils/db.utils';
+export * as routeUtils from '@/utils/route.utils';

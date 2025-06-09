@@ -4,6 +4,7 @@ import {
   EmailJobData,
   GmailMessageJobData,
   GmailPushJobData as GmailPubSubJobData,
+  IndexNoteJobData,
   InvokeAssistantJobData,
   UserAssistantInvocationJobData,
 } from '@/types/queue.type';
@@ -30,7 +31,9 @@ export const invokeAgentQueue = new Queue<InvokeAssistantJobData>('invoke-assist
 
 export const userAssistantInvocationQueue = new Queue<UserAssistantInvocationJobData>(
   'user-assistant-invocation',
-  {
-    connection: redis,
-  }
+  { connection: redis }
 );
+
+export const indexNoteQueue = new Queue<IndexNoteJobData>('index-note', {
+  connection: redis,
+});

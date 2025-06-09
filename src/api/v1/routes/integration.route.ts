@@ -1,6 +1,7 @@
 import { integrationController } from '@/controllers';
 import { authMiddleware } from '@/middlewares';
-import { baseValidation, integrationValidation } from '@/validation';
+import { integrationValidation } from '@/validation';
+import { baseValidation } from '@/validation/base.validation';
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import { controllerUtils } from '@/utils';
 

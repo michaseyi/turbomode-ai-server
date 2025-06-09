@@ -1,4 +1,4 @@
-import { baseValidation } from '@/validation';
+import { baseValidation } from '@/validation/base.validation';
 import { z } from 'zod';
 
 export type ApiSuccessResponse<T> = {
@@ -59,3 +59,12 @@ export type ServiceResult<T = undefined> =
       message: string;
       error: ServiceError;
     };
+
+export type PaginatedT<T> = {
+  data: T[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+};

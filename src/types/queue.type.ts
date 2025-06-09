@@ -29,3 +29,8 @@ export type UserAssistantInvocationJobData = {
 };
 
 export type GmailPushJobData = z.infer<typeof integrationValidation.gmailPush>;
+
+export type IndexNoteJobData = {
+  userId: string;
+  noteId: string;
+};

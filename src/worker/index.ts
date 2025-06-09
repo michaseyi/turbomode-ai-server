@@ -5,10 +5,11 @@ import {
   EmailJobData,
   GmailMessageJobData,
   GmailPushJobData,
+  IndexNoteJobData,
   InvokeAssistantJobData,
   UserAssistantInvocationJobData,
 } from '@/types/queue.type';
-import { actionService, integrationService, mailService } from '@/services';
+import { actionService, integrationService, mailService, noteService } from '@/services';
 import { Message, Topic } from '@google-cloud/pubsub';
 import { config } from '@/config';
 import { pubsub } from '@/lib/pubsub';
@@ -71,4 +72,6 @@ createBullMqWorker<UserAssistantInvocationJobData>('user-assistant-invocation', 
   actionService.requestCompletion(job.data)
 );
 
-createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);
+createBullMqWorker<IndexNoteJobData>('index-note', job => noteService.indexNoteJob(job.data));
+
+// createPubSubWorker(config.env.GOOGLE_PUBSUB_INCOMING_MAIL_TOPIC, integrationService.onGmailHistory);

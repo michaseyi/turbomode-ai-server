@@ -1,5 +1,6 @@
 import { authMiddleware } from '@/middlewares';
-import { actionValidation, baseValidation } from '@/validation';
+import { actionValidation } from '@/validation';
+import { baseValidation } from '@/validation/base.validation';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { apiUtils, controllerUtils } from '@/utils';
 import { actionController } from '@/controllers';

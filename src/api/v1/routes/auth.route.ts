@@ -2,7 +2,8 @@ import { authController } from '@/controllers';
 import { authMiddleware } from '@/middlewares';
 import { googleAuth } from '@hono/oauth-providers/google';
 import { authConfig, config } from '@/config';
-import { authValidation, baseValidation, userValidation } from '@/validation';
+import { authValidation, userValidation } from '@/validation';
+import { baseValidation } from '@/validation/base.validation';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { controllerUtils } from '@/utils';
 

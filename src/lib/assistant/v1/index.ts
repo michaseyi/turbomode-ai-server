@@ -1,14 +1,9 @@
 import { createReactAgent, ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt';
 import { ChatGroq } from '@langchain/groq';
 import {
-  Annotation,
   BaseCheckpointSaver,
-  Command,
   END,
-  MemorySaver,
-  Messages,
   MessagesAnnotation,
-  messagesStateReducer,
   START,
   StateGraph,
 } from '@langchain/langgraph';
@@ -16,23 +11,11 @@ import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 
 import { config } from '@/config';
 import { baseTools, commonTools, googleTools, userTools } from '@/lib/tools';
-import {
-  AIMessage,
-  AIMessageChunk,
-  BaseMessage,
-  HumanMessage,
-  SystemMessage,
-  ToolMessage,
-} from '@langchain/core/messages';
-import { LanguageModelLike } from '@langchain/core/language_models/base';
+import { SystemMessage } from '@langchain/core/messages';
 import { DynamicTool, StructuredToolInterface, tool } from '@langchain/core/tools';
 import { RunnableToolLike } from '@langchain/core/runnables';
-import { z } from 'zod';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { stdout } from 'process';
-import { db } from '@/lib/db';
 import { ConfigurationSchema } from '../configuration';
-import { randomUUID } from 'crypto';
 
 const messages = [
   new SystemMessage(`
@@ -217,7 +200,6 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
 }
 
 export const llm = new ChatGroq({
-  // model: 'llama-3.1-8b-instant',
   model: 'gemma2-9b-it',
   apiKey: config.env.GROQ_API_KEY,
 });

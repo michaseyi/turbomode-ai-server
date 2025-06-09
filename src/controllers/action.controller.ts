@@ -1,7 +1,8 @@
 import { db } from '@/lib/db';
 import { apiUtils, controllerUtils, encryptionUtils } from '@/utils';
 import { z } from 'zod';
-import { actionValidation, baseValidation } from '@/validation';
+import { actionValidation } from '@/validation';
+import { baseValidation } from '@/validation/base.validation';
 import { Context } from 'hono';
 import { actionService } from '@/services';
 import { streamSSE } from 'hono/streaming';
@@ -117,6 +118,8 @@ export async function streamAction(
       for await (const message of messageStream) {
         await stream.writeSSE(message);
       }
+    } catch (error) {
+      await stream.close();
     } finally {
       isClosed = true;
       clearInterval(pingTimer);

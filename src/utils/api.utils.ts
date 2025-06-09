@@ -89,3 +89,141 @@ export const buildPaginatedRouteHandler = <U, T extends ApiQuery<U>, V>(
     );
   };
 };
+
+type QueryResult = {
+  archived?: boolean;
+  pinned?: boolean;
+  favorite?: boolean;
+  createdAt?: { gte?: string; lte?: string };
+  updatedAt?: { gte?: string; lte?: string };
+  content?: { contains: string; mode: 'insensitive' };
+  title?: { contains: string; mode: 'insensitive' };
+  tags?: { has: string } | { hasEvery: string[] };
+  folder?: string;
+  type?: string;
+  hasAttachment?: boolean;
+  wordCount?: { gte?: number; lte?: number };
+  OR?: QueryResult[];
+  NOT?: QueryResult;
+};
+
+export function buildQuery(query: string): { where: QueryResult } {
+  const where: QueryResult = {};
+  const tokens = query.match(/([\w-]+:[^\s]+)|("[^"]+")|([^\s]+)/g) || [];
+  let freeText: string[] = [];
+  let notClauses: QueryResult[] = [];
+
+  tokens.forEach(token => {
+    // for not
+    if (token.startsWith('-')) {
+      const notToken = token.substring(1);
+      const notClause = processSingleToken(notToken);
+      if (Object.keys(notClause).length > 0) {
+        notClauses.push(notClause);
+      }
+      return;
+    }
+
+    if (token.toUpperCase() === 'OR') {
+      return;
+    }
+
+    const processed = processSingleToken(token);
+    if (processed.freeText) {
+      freeText.push(processed.freeText);
+    } else {
+      Object.assign(where, processed);
+    }
+  });
+
+  if (freeText.length) {
+    where.content = { contains: freeText.join(' '), mode: 'insensitive' };
+  }
+
+  if (notClauses.length > 0) {
+    where.NOT = notClauses.length === 1 ? notClauses[0] : { OR: notClauses };
+  }
+
+  return { where };
+}
+
+function processSingleToken(token: string): QueryResult & { freeText?: string } {
+  const result: QueryResult & { freeText?: string } = {};
+
+  if (token.startsWith('is:')) {
+    const status = token.replace('is:', '');
+    switch (status) {
+      case 'archived':
+        result.archived = true;
+        break;
+      case 'pinned':
+        result.pinned = true;
+        break;
+      case 'favorite':
+      case 'starred':
+        result.favorite = true;
+        break;
+      case 'unarchived':
+        result.archived = false;
+        break;
+      case 'unpinned':
+        result.pinned = false;
+        break;
+    }
+  } else if (token.startsWith('has:')) {
+    const has = token.replace('has:', '');
+    if (has === 'attachment') {
+      result.hasAttachment = true;
+    }
+  } else if (token.startsWith('tag:') || token.startsWith('#')) {
+    const tag = token.startsWith('#') ? token.substring(1) : token.replace('tag:', '');
+    result.tags = { has: tag };
+  } else if (token.startsWith('in:')) {
+    result.folder = token.replace('in:', '');
+  } else if (token.startsWith('type:')) {
+    result.type = token.replace('type:', '');
+  } else if (token.startsWith('title:')) {
+    const titleText = token.replace('title:', '').replace(/"/g, '');
+    result.title = { contains: titleText, mode: 'insensitive' };
+  } else if (token.startsWith('content:')) {
+    result.freeText = token.replace('content:', '').replace(/"/g, '');
+  } else if (token.startsWith('after:')) {
+    result.createdAt = result.createdAt || {};
+    result.createdAt.gte = token.replace('after:', '');
+  } else if (token.startsWith('before:')) {
+    result.createdAt = result.createdAt || {};
+    result.createdAt.lte = token.replace('before:', '');
+  } else if (token.startsWith('modified:') || token.startsWith('updated:')) {
+    const dateValue = token.replace(/^(modified:|updated:)/, '');
+    result.updatedAt = { gte: dateValue, lte: dateValue };
+  } else if (token.startsWith('modified-after:') || token.startsWith('updated-after:')) {
+    const dateValue = token.replace(/^(modified-after:|updated-after:)/, '');
+    result.updatedAt = result.updatedAt || {};
+    result.updatedAt.gte = dateValue;
+  } else if (token.startsWith('modified-before:') || token.startsWith('updated-before:')) {
+    const dateValue = token.replace(/^(modified-before:|updated-before:)/, '');
+    result.updatedAt = result.updatedAt || {};
+    result.updatedAt.lte = dateValue;
+  } else if (token.startsWith('words:')) {
+    const wordSpec = token.replace('words:', '');
+    if (wordSpec.startsWith('>')) {
+      result.wordCount = { gte: parseInt(wordSpec.substring(1)) };
+    } else if (wordSpec.startsWith('<')) {
+      result.wordCount = { lte: parseInt(wordSpec.substring(1)) };
+    } else {
+      const count = parseInt(wordSpec);
+      if (!isNaN(count)) {
+        result.wordCount = { gte: count, lte: count };
+      }
+    }
+  } else {
+    result.freeText = token.replace(/"/g, '');
+  }
+
+  return result;
+}
+
+export function buildOrQuery(queries: string[]): { where: QueryResult } {
+  const orClauses = queries.map(q => buildQuery(q).where);
+  return { where: { OR: orClauses } };
+}

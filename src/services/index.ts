@@ -3,3 +3,4 @@ export * as userService from '@/services/user.service';
 export * as integrationService from '@/services/integration.service';
 export * as mailService from '@/services/mail.service';
 export * as actionService from '@/services/action.service';
+export * as noteService from '@/services/note.service';

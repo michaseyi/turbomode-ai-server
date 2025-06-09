@@ -76,3 +76,29 @@ export function parseGmailMessage(message: gmail_v1.Schema$Message): MailMessage
     body: getBody(message.payload),
   };
 }
+
+export function createRawEmail({
+  to,
+  from,
+  body,
+  subject,
+}: {
+  to: string;
+  from: string;
+  body: string;
+  subject: string;
+}): string {
+  const emailLines = [
+    `From: ${from}`,
+    `To: ${to}`,
+    'Content-type: text/html;charset=iso-8859-1',
+    'MIME-Version: 1.0',
+    `Subject: ${subject}`,
+    '',
+    `${body}`,
+  ];
+
+  const email = emailLines.join('\r\n').trim();
+  const base64Email = Buffer.from(email).toString('base64');
+  return base64Email;
+}
