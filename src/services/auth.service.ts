@@ -112,8 +112,12 @@ export async function googleAuth(
   const { id } = profile;
   assert(id, 'Google ID is required');
   assert(profile.email, 'Email is required');
-  assert(profile.given_name, 'First name is required');
-  assert(profile.family_name, 'Last name is required');
+
+  const firstname = profile.given_name;
+
+  assert(firstname, 'First name is required');
+
+  const lastname = profile.family_name || '';
 
   const existingUser = await db.user.findFirst({
     where: {
@@ -135,8 +139,8 @@ export async function googleAuth(
       data: {
         email: profile.email,
         role: Role.User,
-        firstName: profile.given_name,
-        lastName: profile.family_name,
+        firstName: firstname,
+        lastName: lastname,
         googleId: id,
       },
     });

@@ -36,6 +36,13 @@ export const userValidation = {
     favorite: z.coerce.boolean().optional(),
   }),
 
+  searchNotesSchema: baseValidation.apiQuery.extend({
+    text: z.string(),
+    archived: z.coerce.boolean().optional(),
+    pinned: z.coerce.boolean().optional(),
+    favorite: z.coerce.boolean().optional(),
+  }),
+
   detailedNoteSchema,
 
   updateNoteSchema: detailedNoteSchema
@@ -48,14 +55,18 @@ export const userValidation = {
     })
     .deepPartial(),
 
-  fetchedNoteSchema: detailedNoteSchema.pick({
-    id: true,
-    title: true,
-    snippet: true,
-    archived: true,
-    pinned: true,
-    favorite: true,
-    createdAt: true,
-    updatedAt: true,
-  }),
+  fetchedNoteSchema: detailedNoteSchema
+    .pick({
+      id: true,
+      title: true,
+      snippet: true,
+      archived: true,
+      pinned: true,
+      favorite: true,
+      createdAt: true,
+      updatedAt: true,
+    })
+    .extend({
+      content: z.any().optional().nullable(),
+    }),
 };

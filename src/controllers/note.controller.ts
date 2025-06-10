@@ -16,6 +16,35 @@ export async function createNote(c: Context) {
   return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
 }
 
+export async function searchNotes(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        query: z.infer<typeof userValidation.searchNotesSchema>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+
+  const query = c.req.valid('query');
+
+  const result = await noteService.searchNotes(user.id, query);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createPaginatedResponse(
+    c,
+    result.message,
+    result.data.data,
+    result.data.pagination
+  );
+}
+
 export async function fetchNotes(
   c: Context<
     any,

@@ -68,6 +68,32 @@ noteRouter.openapi(
 noteRouter.openapi(
   createRoute({
     method: 'get',
+    path: '/search',
+    description: 'Search notes',
+    tags: ['Note'],
+    request: {
+      query: userValidation.searchNotesSchema,
+    },
+    responses: {
+      200: {
+        description: 'Notes retrieved',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolvePaginatedApiResponseSchema(
+              userValidation.fetchedNoteSchema
+            ),
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  noteController.searchNotes
+);
+
+noteRouter.openapi(
+  createRoute({
+    method: 'get',
     path: '/{noteId}',
     description: 'Fetch note',
     tags: ['Note'],

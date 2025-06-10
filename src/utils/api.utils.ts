@@ -107,7 +107,7 @@ type QueryResult = {
   NOT?: QueryResult;
 };
 
-export function buildQuery(query: string): { where: QueryResult } {
+export function buildNotesQuery(query: string): { where: QueryResult } {
   const where: QueryResult = {};
   const tokens = query.match(/([\w-]+:[^\s]+)|("[^"]+")|([^\s]+)/g) || [];
   let freeText: string[] = [];
@@ -224,6 +224,244 @@ function processSingleToken(token: string): QueryResult & { freeText?: string } 
 }
 
 export function buildOrQuery(queries: string[]): { where: QueryResult } {
-  const orClauses = queries.map(q => buildQuery(q).where);
+  const orClauses = queries.map(q => buildNotesQuery(q).where);
   return { where: { OR: orClauses } };
+}
+type PrismaWhereClause = {
+  archived?: boolean;
+  pinned?: boolean;
+  favorite?: boolean;
+  createdAt?: {
+    gte?: Date;
+    lte?: Date;
+  };
+  updatedAt?: {
+    gte?: Date;
+    lte?: Date;
+  };
+  content?: {
+    contains: string;
+    mode: 'insensitive';
+  };
+  title?: {
+    contains: string;
+    mode: 'insensitive';
+  };
+  // tags?:
+  //   | {
+  //       has: string;
+  //     }
+  //   | {
+  //       hasEvery: string[];
+  //     };
+  // folder?: string;
+  // type?: string;
+  // hasAttachment?: boolean;
+  // wordCount?: {
+  //   gte?: number;
+  //   lte?: number;
+  // };
+  OR?: PrismaWhereClause[];
+  NOT?: PrismaWhereClause;
+};
+
+export function convertNoteQueryToPrismaWhere(query: QueryResult): PrismaWhereClause {
+  const result: PrismaWhereClause = {};
+
+  if (query.archived !== undefined) result.archived = query.archived;
+  if (query.pinned !== undefined) result.pinned = query.pinned;
+  if (query.favorite !== undefined) result.favorite = query.favorite;
+  // if (query.hasAttachment !== undefined) result.hasAttachment = query.hasAttachment;
+
+  // if (query.folder !== undefined) result.folder = query.folder;
+  // if (query.type !== undefined) result.type = query.type;
+
+  // Handle date fields - convert strings to Date objects
+  if (query.createdAt) {
+    result.createdAt = {};
+    if (query.createdAt.gte) result.createdAt.gte = new Date(query.createdAt.gte);
+    if (query.createdAt.lte) result.createdAt.lte = new Date(query.createdAt.lte);
+  }
+
+  if (query.updatedAt) {
+    result.updatedAt = {};
+    if (query.updatedAt.gte) result.updatedAt.gte = new Date(query.updatedAt.gte);
+    if (query.updatedAt.lte) result.updatedAt.lte = new Date(query.updatedAt.lte);
+  }
+
+  if (query.content) {
+    result.content = {
+      contains: query.content.contains,
+      mode: query.content.mode,
+    };
+  }
+
+  if (query.title) {
+    result.title = {
+      contains: query.title.contains,
+      mode: query.title.mode,
+    };
+  }
+
+  // if (query.tags) {
+  //   result.tags = query.tags;
+  // }
+
+  // if (query.wordCount) {
+  //   result.wordCount = {};
+  //   if (query.wordCount.gte !== undefined) result.wordCount.gte = query.wordCount.gte;
+  //   if (query.wordCount.lte !== undefined) result.wordCount.lte = query.wordCount.lte;
+  // }
+
+  if (query.OR) {
+    result.OR = query.OR.map(orQuery => convertNoteQueryToPrismaWhere(orQuery));
+  }
+
+  if (query.NOT) {
+    result.NOT = convertNoteQueryToPrismaWhere(query.NOT);
+  }
+
+  return result;
+}
+
+type QdrantFilter = {
+  should?: QdrantCondition[];
+  must?: QdrantCondition[];
+  must_not?: QdrantCondition[];
+};
+
+type QdrantCondition =
+  | {
+      key: string;
+      match?: {
+        value: string | number | boolean;
+      };
+      range?: {
+        gte?: number;
+        lte?: number;
+        gt?: number;
+        lt?: number;
+      };
+    }
+  | {
+      should?: QdrantCondition[];
+      must?: QdrantCondition[];
+      must_not?: QdrantCondition[];
+    };
+
+export function convertToQdrantFilter(query: QueryResult): QdrantFilter {
+  const must: QdrantCondition[] = [];
+
+  if (query.archived !== undefined) {
+    must.push({
+      key: 'metadata.archived',
+      match: { value: query.archived },
+    });
+  }
+
+  if (query.pinned !== undefined) {
+    must.push({
+      key: 'metadata.pinned',
+      match: { value: query.pinned },
+    });
+  }
+
+  if (query.favorite !== undefined) {
+    must.push({
+      key: 'metadata.favorite',
+      match: { value: query.favorite },
+    });
+  }
+
+  // if (query.hasAttachment !== undefined) {
+  //   must.push({
+  //     key: 'hasAttachment',
+  //     match: { value: query.hasAttachment },
+  //   });
+  // }
+
+  // if (query.folder !== undefined) {
+  //   must.push({
+  //     key: 'folder',
+  //     match: { value: query.folder },
+  //   });
+  // }
+
+  // if (query.type !== undefined) {
+  //   must.push({
+  //     key: 'type',
+  //     match: { value: query.type },
+  //   });
+  // }
+
+  if (query.createdAt) {
+    const condition: any = { key: 'metadata.createdAt', range: {} };
+    if (query.createdAt.gte) {
+      condition.range.gte = new Date(query.createdAt.gte).toISOString();
+    }
+    if (query.createdAt.lte) {
+      condition.range.lte = new Date(query.createdAt.lte).toISOString();
+    }
+    must.push(condition);
+  }
+
+  if (query.updatedAt) {
+    const condition: any = { key: 'metadata.updatedAt', range: {} };
+    if (query.updatedAt.gte) {
+      condition.range.gte = new Date(query.updatedAt.gte).toISOString();
+    }
+    if (query.updatedAt.lte) {
+      condition.range.lte = new Date(query.updatedAt.lte).toISOString();
+    }
+    must.push(condition);
+  }
+
+  // if (query.tags) {
+  //   if ('has' in query.tags) {
+  //     must.push({
+  //       key: 'tags',
+  //       match: { value: query.tags.has },
+  //     });
+  //   } else if ('hasEvery' in query.tags) {
+  //     query.tags.hasEvery.forEach(tag => {
+  //       must.push({
+  //         key: 'tags',
+  //         match: { value: tag },
+  //       });
+  //     });
+  //   }
+  // }
+
+  // if (query.wordCount) {
+  //   const condition: any = { key: 'wordCount', range: {} };
+  //   if (query.wordCount.gte !== undefined) {
+  //     condition.range.gte = query.wordCount.gte;
+  //   }
+  //   if (query.wordCount.lte !== undefined) {
+  //     condition.range.lte = query.wordCount.lte;
+  //   }
+  //   must.push(condition);
+  // }
+
+  const result: QdrantFilter = {};
+
+  if (must.length > 0) {
+    result.must = must;
+  }
+
+  if (query.OR) {
+    result.should = query.OR.map(orQuery => {
+      const orFilter = convertToQdrantFilter(orQuery);
+      return orFilter.must?.[0] || { key: 'empty', match: { value: true } };
+    });
+  }
+
+  if (query.NOT) {
+    const notFilter = convertToQdrantFilter(query.NOT);
+    if (notFilter.must) {
+      result.must_not = notFilter.must;
+    }
+  }
+
+  return result;
 }

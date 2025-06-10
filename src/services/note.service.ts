@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { PaginatedT, ServiceErrorCode, ServiceResult } from '@/types';
-import { dbUtils, serviceUtils } from '@/utils';
+import { apiUtils, dbUtils, serviceUtils } from '@/utils';
 import { userValidation } from '@/validation';
 import { z } from 'zod';
 import '@/lib/vector-store';
@@ -8,6 +8,8 @@ import { notesVectorStore } from '@/lib/vector-store';
 import { Document } from '@langchain/core/documents';
 import { IndexNoteJobData } from '@/types/queue.type';
 import { indexNoteQueue } from '@/queues';
+import { convertNoteQueryToPrismaWhere } from '@/utils/api.utils';
+import { qdrantClient } from '@/lib/qdrant';
 
 export async function createNote(
   userId: string
@@ -91,7 +93,7 @@ export async function deleteNote(userId: string, noteId: string): Promise<Servic
   return serviceUtils.createSuccessResult('Note deleted', undefined);
 }
 
-function formatNoteContent(blocks: any): string {
+export function formatNoteContent(blocks: any): string {
   function formatBlock(block: any): string {
     const contents = block.content;
 
@@ -123,8 +125,6 @@ export async function indexNoteJob(data: IndexNoteJobData) {
 
   const content = formatNoteContent(note.content);
 
-  console.log(content);
-
   await db.note.update({
     where: { userId, id: noteId },
     data: {
@@ -150,4 +150,61 @@ export async function indexNoteJob(data: IndexNoteJobData) {
   await notesVectorStore.addDocuments([document]);
 
   return serviceUtils.createSuccessResult('Note indexed', undefined);
+}
+
+export async function searchNotes(
+  userId: string,
+  query: z.infer<typeof userValidation.searchNotesSchema>,
+  options?: { includeContent?: boolean }
+): Promise<ServiceResult<PaginatedT<z.infer<typeof userValidation.fetchedNoteSchema>>>> {
+  const text = query.text;
+
+  const { where } = apiUtils.buildNotesQuery(text);
+
+  const shouldIncludeContent = options?.includeContent ?? false;
+
+  if (!where.content?.contains.length) {
+    const { data, pagination } = await dbUtils.paginateV2(
+      db.note,
+      {
+        ...convertNoteQueryToPrismaWhere(where),
+        userId,
+      },
+      { omit: { content: !shouldIncludeContent } }
+    );
+
+    return serviceUtils.createSuccessResult('Notes fetched', {
+      data: userValidation.fetchedNoteSchema.array().parse(data),
+      pagination,
+    });
+  }
+
+  const filter = apiUtils.convertToQdrantFilter(where);
+
+  filter.must = [...(filter.must || []), { key: 'metadata.userId', match: { value: userId } }];
+
+  const value = await notesVectorStore.similaritySearch(
+    where.content?.contains || '',
+    query.limit,
+    filter
+  );
+
+  const ids = value.map(v => v.id!);
+
+  let data = await db.note.findMany({
+    where: { userId, id: { in: ids } },
+    omit: { content: !shouldIncludeContent },
+  });
+
+  const idToNote = new Map(data.map(note => [note.id, note]));
+  data = ids.map(id => idToNote.get(id)).filter((note): note is (typeof data)[0] => Boolean(note));
+
+  return serviceUtils.createSuccessResult('Notes fetched', {
+    data: userValidation.fetchedNoteSchema.array().parse(data),
+    pagination: {
+      limit: query.limit,
+      page: 1,
+      total: data.length,
+    },
+  });
 }
