@@ -68,6 +68,30 @@ export function parseGmailMessage(message: gmail_v1.Schema$Message): MailMessage
     return '';
   }
 
+  function _getBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
+    if (!payload) return '';
+
+    if (payload.parts && payload.parts.length > 0) {
+      const textPart = payload.parts.find(
+        part => part.mimeType === 'text/plain' || part.mimeType === 'text/html'
+      );
+
+      if (textPart && textPart.body && textPart.body.data) {
+        return Buffer.from(textPart.body.data, 'base64').toString('utf-8');
+      }
+
+      for (const part of payload.parts) {
+        const nestedBody = _getBody(part);
+        if (nestedBody) return nestedBody;
+      }
+    }
+
+    if (payload.body && payload.body.data) {
+      return Buffer.from(payload.body.data, 'base64').toString('utf-8');
+    }
+    return '';
+  }
+
   return {
     from: getHeader('From'),
     to: getHeader('To'),

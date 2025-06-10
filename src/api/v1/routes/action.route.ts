@@ -2,10 +2,8 @@ import { authMiddleware } from '@/middlewares';
 import { actionValidation } from '@/validation';
 import { baseValidation } from '@/validation/base.validation';
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
-import { apiUtils, controllerUtils, routeUtils } from '@/utils';
+import { controllerUtils, routeUtils } from '@/utils';
 import { actionController } from '@/controllers';
-import { stream, streamSSE, streamText } from 'hono/streaming';
-import { actionService } from '@/services';
 
 export const actionRouter = new OpenAPIHono({
   defaultHook: controllerUtils.validationHook,
@@ -24,7 +22,7 @@ actionRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: controllerUtils.resolvePaginatedApiResponseSchema(
@@ -33,14 +31,7 @@ actionRouter.openapi(
           },
         },
       },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   actionController.getActions
@@ -54,113 +45,17 @@ actionRouter.openapi(
     tags: ['Action'],
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: controllerUtils.resolveApiResponseSchema(actionValidation.createdActionSchema),
           },
         },
       },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
-    },
-  }),
-  actionController.createAction
-);
-
-actionRouter.openapi(
-  createRoute({
-    method: 'post',
-    path: '/',
-    description: 'Create new action',
-    tags: ['Action'],
-    request: {
-      body: {
-        required: true,
-        content: {
-          'application/json': {
-            schema: z.object({}),
-          },
-        },
-      },
-    },
-    responses: {
-      200: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiResponse,
-          },
-        },
-      },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
-    },
-  }),
-  controllerUtils.placeholder
-);
-
-actionRouter.openapi(
-  createRoute({
-    method: 'post',
-    path: '/{actionId}',
-    description: 'Interact with an action',
-    tags: ['Action'],
-    request: {},
-    responses: {
-      200: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiResponse,
-          },
-        },
-      },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
-    },
-  }),
-  controllerUtils.placeholder
-);
-
-actionRouter.openapi(
-  createRoute({
-    method: 'post',
-    path: '/{actionId}',
-    description: 'Interact with an action',
-    tags: ['Action'],
-    request: {},
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiResponse,
-          },
-        },
-      },
       ...routeUtils.errorResponses,
     },
   }),
-  controllerUtils.placeholder
+  actionController.createAction
 );
 
 actionRouter.openapi(

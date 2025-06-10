@@ -385,7 +385,7 @@ integrationRouter.openapi(
     description: 'Manually sync gmail messages',
     tags: ['Integration'],
     request: {
-      params: integrationValidation.gmailIntegrationParamSchema,
+      params: integrationValidation.integrationBaseParams,
     },
     responses: {
       200: {

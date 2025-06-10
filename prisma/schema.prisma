@@ -63,6 +63,7 @@ model GmailIntegration {
   refreshToken String
   instruction String
   lastHistoryId String?
+  lastSyncAt DateTime?
   emailProcessOption EmailProcessOption @default(All)
   specificAddresses String? // used in conjuction with emailProcssingOption
   messages GmailMessage[]
@@ -76,6 +77,7 @@ model GoogleCalendarIntegration{
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   integrationId String @unique
   events CalendarEvent[]
+  lastSyncAt DateTime?
   email String @unique
   accessToken String
   refreshToken String

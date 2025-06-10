@@ -9,7 +9,7 @@ import {
 import { GmailMessageSyncJobData } from '@/types/queue.type';
 import { dbUtils, googleUtils, loggerUtils, serviceUtils } from '@/utils';
 import { integrationValidation } from '@/validation';
-import { google } from 'googleapis';
+import { Auth, gmail_v1, google } from 'googleapis';
 import { z } from 'zod';
 
 export async function addGmailIntegration(
@@ -259,44 +259,6 @@ export async function syncGmailMessages(userId: string, integrationId: string) {
   return serviceUtils.createSuccessResult('Gmail sync started', undefined);
 }
 
-export async function syncGmailMessagesJobHandler(data: GmailMessageSyncJobData) {
-  const { gmailIntegrationId } = data;
-
-  const gmailIntegration = await db.gmailIntegration.findUnique({
-    where: { id: gmailIntegrationId },
-  });
-
-  if (!gmailIntegration) {
-    loggerUtils.error('Gmail integration not found', { gmailIntegrationId });
-    throw new Error('Gmail integration not found');
-  }
-
-  const oauth = googleUtils.createOauthClient();
-
-  oauth.setCredentials({
-    access_token: gmailIntegration.accessToken,
-    refresh_token: gmailIntegration.refreshToken,
-  });
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth });
-
-  loggerUtils.debug('beginning syncing gmail messages...');
-
-  let lastHistoryId = gmailIntegration.lastHistoryId;
-
-  if (!lastHistoryId) {
-    loggerUtils.warn('No last history ID found, syncing all messages...');
-  }
-
-  // on each call
-
-  await gmail.users.messages.list({
-    userId: 'me',
-    labelIds: ['INBOX'],
-    // ...(lastHistoryId ? {} : {}),
-  });
-}
-
 export async function sendGmailMessage(
   userId: string,
   integrationId: string,
@@ -390,4 +352,290 @@ export async function fetchGmailMessage(
     'Gmail message fetched',
     integrationValidation.fullMailMessageSchema.parse(message)
   );
+}
+
+export async function syncGmailMessagesJobHandler(data: GmailMessageSyncJobData) {
+  const { gmailIntegrationId } = data;
+
+  const gmailIntegration = await db.gmailIntegration.findUnique({
+    where: { id: gmailIntegrationId },
+  });
+
+  if (!gmailIntegration) {
+    loggerUtils.error('Gmail integration not found', { gmailIntegrationId });
+    throw new Error('Gmail integration not found');
+  }
+
+  const oauth = googleUtils.createOauthClient();
+
+  oauth.setCredentials({
+    access_token: gmailIntegration.accessToken,
+    refresh_token: gmailIntegration.refreshToken,
+  });
+
+  const gmail = google.gmail({ version: 'v1', auth: oauth });
+
+  loggerUtils.debug('Beginning Gmail messages sync...', { gmailIntegrationId });
+
+  try {
+    let lastHistoryId = gmailIntegration.lastHistoryId;
+
+    if (!lastHistoryId) {
+      loggerUtils.info('No history ID found, performing initial full sync');
+      await performFullSync(gmail, gmailIntegrationId);
+    } else {
+      loggerUtils.info('Performing incremental sync', { lastHistoryId });
+      await performIncrementalSync(gmail, gmailIntegrationId, lastHistoryId);
+    }
+
+    loggerUtils.info('Gmail sync completed successfully', { gmailIntegrationId });
+  } catch (error) {
+    loggerUtils.error('Gmail sync failed', { gmailIntegrationId, error });
+    throw error;
+  }
+}
+
+async function performFullSync(gmail: gmail_v1.Gmail, gmailIntegrationId: string) {
+  let pageToken: string | undefined | null;
+  let messageCount = 0;
+  let currentHistoryId: string | null | undefined;
+
+  do {
+    const response = await gmail.users.messages.list({
+      userId: 'me',
+      labelIds: ['INBOX'],
+      maxResults: 100,
+      pageToken: pageToken!,
+    });
+
+    if (
+      !currentHistoryId &&
+      response.data.resultSizeEstimate &&
+      response.data.resultSizeEstimate > 0
+    ) {
+      currentHistoryId = response.data.messages?.[0]?.historyId;
+    }
+
+    if (response.data.messages && response.data.messages.length > 0) {
+      await processMessages(gmail, response.data.messages, gmailIntegrationId);
+      messageCount += response.data.messages.length;
+    }
+
+    pageToken = response.data.nextPageToken;
+
+    loggerUtils.debug(`Processed ${messageCount} messages so far`);
+  } while (pageToken);
+
+  if (currentHistoryId) {
+    await db.gmailIntegration.update({
+      where: { id: gmailIntegrationId },
+      data: {
+        lastHistoryId: currentHistoryId,
+        lastSyncAt: new Date(),
+      },
+    });
+  }
+
+  loggerUtils.info(`Full sync completed: ${messageCount} messages processed`);
+}
+
+async function performIncrementalSync(
+  gmail: gmail_v1.Gmail,
+  gmailIntegrationId: string,
+  startHistoryId: string
+) {
+  try {
+    const profile = await gmail.users.getProfile({ userId: 'me' });
+    const currentHistoryId = profile.data.historyId;
+
+    if (startHistoryId === currentHistoryId) {
+      loggerUtils.info('No changes detected, sync up to date');
+      return;
+    }
+
+    loggerUtils.info(`Syncing changes from ${startHistoryId} to ${currentHistoryId}`);
+
+    let pageToken: string | undefined | null;
+    let changesProcessed = 0;
+
+    do {
+      const historyResponse = await gmail.users.history.list({
+        userId: 'me',
+        startHistoryId: startHistoryId,
+        labelId: 'INBOX',
+        historyTypes: ['messageAdded', 'messageDeleted', 'labelAdded', 'labelRemoved'],
+        maxResults: 100,
+        pageToken: pageToken!,
+      });
+
+      if (historyResponse.data.history) {
+        for (const historyRecord of historyResponse.data.history) {
+          await processHistoryRecord(gmail, historyRecord, gmailIntegrationId);
+          changesProcessed++;
+        }
+      }
+
+      pageToken = historyResponse.data.nextPageToken;
+    } while (pageToken);
+
+    await db.gmailIntegration.update({
+      where: { id: gmailIntegrationId },
+      data: {
+        lastHistoryId: currentHistoryId,
+        lastSyncAt: new Date(),
+      },
+    });
+
+    loggerUtils.info(`Incremental sync completed: ${changesProcessed} changes processed`);
+  } catch (error: any) {
+    if (error.code === 404) {
+      loggerUtils.warn('History not found, falling back to full sync');
+      await performFullSync(gmail, gmailIntegrationId);
+    } else {
+      throw error;
+    }
+  }
+}
+
+async function processHistoryRecord(
+  gmail: gmail_v1.Gmail,
+  historyRecord: gmail_v1.Schema$History,
+  gmailIntegrationId: string
+) {
+  if (historyRecord.messagesAdded) {
+    const messages = historyRecord.messagesAdded.map(item => item.message);
+    await processMessages(gmail, messages, gmailIntegrationId);
+  }
+
+  if (historyRecord.messagesDeleted) {
+    for (const deletedItem of historyRecord.messagesDeleted) {
+      if (deletedItem.message?.id) {
+        await deleteMessage(deletedItem.message.id, gmailIntegrationId);
+      }
+    }
+  }
+
+  if (historyRecord.labelsAdded) {
+    for (const labelItem of historyRecord.labelsAdded) {
+      if (labelItem.labelIds?.includes('INBOX')) {
+        await processMessages(gmail, [labelItem.message], gmailIntegrationId);
+      }
+    }
+  }
+
+  if (historyRecord.labelsRemoved) {
+    for (const labelItem of historyRecord.labelsRemoved) {
+      if (labelItem.labelIds?.includes('INBOX')) {
+        if (labelItem.message?.id) {
+          await deleteMessage(labelItem.message.id, gmailIntegrationId);
+        }
+      }
+    }
+  }
+}
+
+async function processMessages(
+  gmail: gmail_v1.Gmail,
+  messages: (gmail_v1.Schema$Message | undefined)[],
+  gmailIntegrationId: string
+) {
+  const batchSize = 10;
+
+  for (let i = 0; i < messages.length; i += batchSize) {
+    const batch = messages.slice(i, i + batchSize);
+
+    await Promise.all(
+      batch.map(async message => {
+        if (!message || !message.id) {
+          loggerUtils.warn('Skipping invalid message', { message });
+          return;
+        }
+
+        try {
+          const fullMessage = await gmail.users.messages.get({
+            userId: 'me',
+            id: message.id,
+            format: 'full',
+          });
+
+          await saveOrUpdateMessage(fullMessage.data, gmailIntegrationId);
+        } catch (error) {
+          loggerUtils.error(`Failed to process message ${message.id}`, {
+            error,
+            messageId: message.id,
+          });
+        }
+      })
+    );
+
+    if (i + batchSize < messages.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+}
+
+async function saveOrUpdateMessage(
+  messageData: gmail_v1.Schema$Message,
+  gmailIntegrationId: string
+) {
+  const parsedMessage = googleUtils.parseGmailMessage(messageData);
+
+  const { from, subject, to, body } = parsedMessage;
+
+  // const receivedAt = date ? new Date(date) : new Date();
+
+  await db.gmailMessage.upsert({
+    where: {
+      messageId: messageData.id!,
+    },
+    create: {
+      messageId: messageData.id!,
+      gmailIntegrationId: gmailIntegrationId,
+      threadId: messageData.threadId,
+      subject: subject,
+      from: from,
+      to: to ? [to] : [],
+      body: body,
+      labelIds: messageData.labelIds || [],
+      // historyId: messageData.historyId,
+      internalDate: new Date(parseInt(messageData.internalDate!)),
+      snippet: messageData.snippet || '',
+    },
+    update: {
+      labelIds: messageData.labelIds || [],
+      // historyId: messageData.historyId,
+    },
+  });
+}
+
+async function deleteMessage(messageId: string, gmailIntegrationId: string) {
+  await db.gmailMessage.deleteMany({
+    where: {
+      messageId,
+      gmailIntegrationId: gmailIntegrationId,
+    },
+  });
+
+  loggerUtils.debug(`Deleted message ${messageId}`);
+}
+
+export async function refreshTokenIfNeeded(oauth: Auth.OAuth2Client, gmailIntegrationId: string) {
+  try {
+    const { credentials } = await oauth.refreshAccessToken();
+
+    if (credentials.access_token) {
+      await db.gmailIntegration.update({
+        where: { id: gmailIntegrationId },
+        data: {
+          accessToken: credentials.access_token,
+          ...(credentials.refresh_token && { refreshToken: credentials.refresh_token }),
+        },
+      });
+
+      oauth.setCredentials(credentials);
+    }
+  } catch (error: any) {
+    loggerUtils.error('Failed to refresh token', { gmailIntegrationId, error });
+    throw new Error('Authentication failed - token refresh required');
+  }
 }
