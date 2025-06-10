@@ -50,8 +50,6 @@ export const searchUserNotes = tool(
       };
     }
 
-    console.log(query);
-
     const result = await noteService.searchNotes(
       c.user.id,
       userValidation.searchNotesSchema.parse({
@@ -75,8 +73,6 @@ export const searchUserNotes = tool(
       content: formatNoteContent(note.content),
     }));
 
-    console.log(JSON.stringify(result.data, null, 2));
-
     return {
       success: true,
       message: 'User notes fetched',
@@ -87,16 +83,54 @@ export const searchUserNotes = tool(
   {
     name: 'search_user_notes',
     description: `\
-Searches the authenticated user's notes using a flexible, Gmail-style query language.
+PRIMARY CONTEXT ENRICHMENT TOOL - Always consider searching user notes first when you need personal context, preferences, or background information about the user.
 
-This is your go to when  you need to get personal information about the user, they mostly have something in their notes for you to use.
+This tool searches the authenticated user's personal notes using flexible, Gmail-style query syntax PLUS powerful similarity vector search. User notes often contain:
+- Personal preferences, goals, and context about their life/work
+- Project details, meeting notes, and ongoing initiatives  
+- Past conversations, decisions, and important information
+- Contact information, schedules, and reminders
+- Ideas, plans, and personal knowledge base
 
-You can use special commands and free text, for example:\n- is:pinned\n- is:archived\n- tag:work\n- after:2024-06-01 before:2024-06-10\n-  Any free text will search the note content using similarity search.\n\nCombine commands and text for powerful searches, e.g.:\n  is:pinned after:2024-06-01 meeting one the new projects\n\nReturns a paginated list of notes matching the query.`,
+WHEN TO USE THIS TOOL:
+- Before making recommendations or suggestions - check for user preferences
+- When user mentions projects, people, or events - search for related context
+- For personalized responses - find relevant background information
+- When user asks about something they "mentioned before" or references past context
+- To understand user's current priorities, goals, or ongoing work
+
+SEARCH CAPABILITIES:
+- **Similarity Vector Search**: Free text uses semantic similarity matching - write natural phrases and questions as you would speak them
+- Special commands: is:pinned, is:archived, is:favorite, tag:work, tag:personal
+- Date filtering: after:2024-06-01, before:2024-12-31
+- Negation support: -is:archived, -tag:work
+- Combined queries: Mix commands with natural language phrases
+
+HOW TO WRITE EFFECTIVE QUERIES:
+- Use natural language phrases and questions
+- Write complete thoughts, not keyword lists
+- Ask specific questions about what you're looking for
+- Include context and details in conversational form
+
+GOOD EXAMPLES:
+- "quarterly planning meeting with the marketing team" (not "quarterly planning meeting marketing team")
+- "my morning routine and productivity habits" (not "morning routine productivity habits")
+- "vacation plans for Italy trip" (not "vacation italy travel plans")
+- "fitness goals and workout schedule" (not "fitness workout routine weight training")
+- "is:pinned what are my career goals" (not "is:pinned career development goals")
+- "tag:work how do we handle code reviews" (not "tag:work code review process")
+
+BAD EXAMPLES (keyword stuffing):
+- "meeting action items decisions quarterly business"
+- "software development best practices code review process"
+- "fitness workout routine weight training schedule gym"
+
+Write queries as natural phrases or questions, not lists of keywords. The similarity search works best with conversational, human-like language.`,
     schema: z.object({
       query: z
         .string()
         .describe(
-          `The search query for notes.\n\nSupports Gmail-style syntax:\n- is:pinned, is:archived, is:favorite, after:YYYY-MM-DD, before:YYYY-MM-DD for date ranges\n- Any free text for content search\n- Combine commands and text for advanced queries. \n You can also negate commands, e.g is:archived vs -is:archived`
+          `Search query using natural language phrases or questions combined with optional Gmail-style commands. Write as you would naturally speak or ask a question. Examples: "my morning productivity routine", "is:pinned what are my fitness goals", "tag:work meeting notes about the new project", "vacation planning for Europe trip". Avoid keyword lists - use complete, natural phrases instead.`
         ),
     }),
   }

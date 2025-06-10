@@ -168,8 +168,8 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
   const llm = new ChatGroq({
     streaming: true,
 
-    // model: 'mistral-saba-24b',
-    model: 'qwen-qwq-32b',
+    model: 'mistral-saba-24b',
+    // model: 'qwen-qwq-32b',
     // model: 'gemma2-9b-it',
     // model: 'llama-3.1-8b-instant',
     // temperature: 0.7,
