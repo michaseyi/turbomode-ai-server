@@ -9,7 +9,6 @@ import { Document } from '@langchain/core/documents';
 import { IndexNoteJobData } from '@/types/queue.type';
 import { indexNoteQueue } from '@/queues';
 import { convertNoteQueryToPrismaWhere } from '@/utils/api.utils';
-import { qdrantClient } from '@/lib/qdrant';
 
 export async function createNote(
   userId: string

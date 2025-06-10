@@ -244,3 +244,79 @@ export async function syncCalendarEvent(
 
   return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
 }
+
+export async function fetchGmailMessages(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.integrationBaseParams>;
+        query: z.infer<typeof integrationValidation.gmailQuery>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { integrationId } = c.req.valid('param');
+  const query = c.req.valid('query');
+
+  const result = await integrationService.fetchGmailMessages(user.id, integrationId, query);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createPaginatedResponse(
+    c,
+    result.message,
+    result.data.data,
+    result.data.pagination
+  );
+}
+
+export async function fetchGmailMessage(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.gmailIntegrationParamSchema>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { messageId, integrationId } = c.req.valid('param');
+
+  const result = await integrationService.fetchGmailMessage(user.id, integrationId, messageId);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}
+
+export async function syncGmailMessages(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.integrationBaseParams>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { integrationId } = c.req.valid('param');
+
+  const result = await integrationService.syncGmailMessages(user.id, integrationId);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}

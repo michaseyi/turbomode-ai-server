@@ -34,3 +34,7 @@ export type IndexNoteJobData = {
   userId: string;
   noteId: string;
 };
+
+export type GmailMessageSyncJobData = {
+  gmailIntegrationId: string;
+};

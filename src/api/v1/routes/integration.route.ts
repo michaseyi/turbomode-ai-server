@@ -3,7 +3,7 @@ import { authMiddleware } from '@/middlewares';
 import { integrationValidation } from '@/validation';
 import { baseValidation } from '@/validation/base.validation';
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
-import { controllerUtils } from '@/utils';
+import { controllerUtils, routeUtils } from '@/utils';
 
 export const integrationRouter = new OpenAPIHono({
   defaultHook: controllerUtils.validationHook,
@@ -170,15 +170,7 @@ integrationRouter.openapi(
           },
         },
       },
-
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.getGoogleCalendarIntegration
@@ -187,7 +179,7 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'patch',
-    path: '/gmail/:integrationId',
+    path: '/gmail/{integrationId}',
     description: 'Update a gmail integration',
     tags: ['Integration'],
     request: {
@@ -203,21 +195,14 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
           },
         },
       },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.modifyGmailIntegration
@@ -226,7 +211,7 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'delete',
-    path: '/gmail/:integrationId',
+    path: '/gmail/{integrationId}',
     description: 'Delete a gmail integration',
     tags: ['Integration'],
     request: {
@@ -234,21 +219,14 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
           },
         },
       },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.deleteGmailIntegration
@@ -257,7 +235,7 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'delete',
-    path: '/google-calendar/:integrationId',
+    path: '/google-calendar/{integrationId}',
     description: 'Delete a google calendar integration',
     tags: ['Integration'],
     request: {
@@ -265,21 +243,14 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
           },
         },
       },
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.deleteGoogleCalendarIntegration
@@ -288,7 +259,7 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'post',
-    path: '/gmail/:integrationId/enable',
+    path: '/gmail/{integrationId}/enable',
     description: 'Enable a gmail integration',
     tags: ['Integration'],
     request: {
@@ -296,22 +267,14 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
           },
         },
       },
-
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.enableGmailIntegration
@@ -320,7 +283,7 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'post',
-    path: '/gmail/:integrationId/disable',
+    path: '/gmail/{integrationId}/disable',
     description: 'Disable a gmail integration',
     tags: ['Integration'],
     request: {
@@ -328,22 +291,14 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
           },
         },
       },
-
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.disableGmailIntegration
@@ -352,8 +307,132 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'get',
-    path: '/google-calendar/:integrationId/events',
-    description: 'Get canendar events',
+    path: '/gmail/{integrationId}/messages',
+    description: 'Fetch gmail messages',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.integrationBaseParams,
+      query: integrationValidation.gmailQuery,
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolvePaginatedApiResponseSchema(
+              integrationValidation.mailMessageSchema
+            ),
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+
+  integrationController.fetchGmailMessages
+);
+
+// integrationRouter.openapi(
+//   createRoute({
+//     method: 'get',
+//     path: '/gmail/{integrationId}/messages/search',
+//     description: 'Semantic search over gmail messages',
+//     tags: ['Integration'],
+//     request: {
+//       params: integrationValidation.integrationBaseParams,
+//     },
+//     responses: {
+//       200: {
+//         description: 'Success',
+//         content: {
+//           'application/json': {
+//             schema: baseValidation.apiResponse,
+//           },
+//         },
+//       },
+//       ...routeUtils.errorResponses,
+//     },
+//   })
+// );
+
+// integrationRouter.openapi(
+//   createRoute({
+//     method: 'post',
+//     path: '/gmail/{integrationId}/messages/send',
+//     description: 'Send or reply a gmail message',
+//     tags: ['Integration'],
+//     request: {
+//       params: integrationValidation.gmailIntegrationParamSchema,
+//     },
+//     responses: {
+//       200: {
+//         description: 'Success',
+//         content: {
+//           'application/json': {
+//             schema: baseValidation.apiResponse,
+//           },
+//         },
+//       },
+//       ...routeUtils.errorResponses,
+//     },
+//   })
+// );
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'post',
+    path: '/gmail/{integrationId}/messages/sync',
+    description: 'Manually sync gmail messages',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.gmailIntegrationParamSchema,
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  integrationController.syncGmailMessages
+);
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/gmail/{integrationId}/messages/{messageId}',
+    description: 'Fetch gmail message',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.gmailIntegrationParamSchema,
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: controllerUtils.resolveApiResponseSchema(
+              integrationValidation.fullMailMessageSchema
+            ),
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  integrationController.fetchGmailMessage
+);
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'get',
+    path: '/google-calendar/{integrationId}/events',
+    description: 'Get calendar events',
     tags: ['Integration'],
     request: {
       query: integrationValidation.fetchCalendarEventQuery,
@@ -361,7 +440,7 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: controllerUtils.resolveApiResponseSchema(
@@ -370,15 +449,7 @@ integrationRouter.openapi(
           },
         },
       },
-
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.fetchCalendarEvent
@@ -387,7 +458,7 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'post',
-    path: '/google-calendar/:integrationId/sync',
+    path: '/google-calendar/{integrationId}/events/sync',
     description: 'Sync calendar events',
     tags: ['Integration'],
     request: {
@@ -403,22 +474,14 @@ integrationRouter.openapi(
     },
     responses: {
       200: {
-        description: '',
+        description: 'Success',
         content: {
           'application/json': {
             schema: baseValidation.apiResponse,
           },
         },
       },
-
-      400: {
-        description: '',
-        content: {
-          'application/json': {
-            schema: baseValidation.apiErrorResponse,
-          },
-        },
-      },
+      ...routeUtils.errorResponses,
     },
   }),
   integrationController.syncCalendarEvent

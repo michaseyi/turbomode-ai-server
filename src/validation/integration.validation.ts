@@ -1,5 +1,6 @@
 import { EmailProcessOption, IntegrationType } from '@prisma/client';
 import { z } from 'zod';
+import { baseValidation } from './base.validation';
 
 const baseFetchedIntegration = z.object({
   id: z.string(),
@@ -23,7 +24,26 @@ const fetchedIntegrations = z.union([
   }),
 ]);
 
+const fullMailMessageSchema = z.object({
+  id: z.string(),
+  snippet: z.string().nullable(),
+  from: z.string().nullable(),
+  to: z.string().array(),
+  subject: z.string().nullable(),
+  cc: z.string().array(),
+  bcc: z.string().array(),
+  body: z.string().nullable(),
+  isUnread: z.boolean(),
+  internalDate: z.date(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
 export const integrationValidation = {
+  fullMailMessageSchema,
+
+  mailMessageSchema: fullMailMessageSchema.omit({ body: true }),
+
   gmailPush: z.object({
     emailAddress: z.string().email(),
     historyId: z.coerce.string(),
@@ -82,6 +102,11 @@ export const integrationValidation = {
     integrationId: z.string(),
   }),
 
+  gmailIntegrationParamSchema: z.object({
+    integrationId: z.string(),
+    messageId: z.string(),
+  }),
+
   fetchedIntegrations,
 
   fetchedCalendarEvent: z.object({
@@ -99,4 +124,20 @@ export const integrationValidation = {
   fetchCalendarEventQuery: z.object({
     date: z.string().datetime(),
   }),
+
+  gmailQuery: baseValidation.apiQuery.extend({}),
+
+  sendMailMessageSchema: z
+    .object({
+      to: z.string().email().optional(),
+      messageId: z.string().optional(),
+      subject: z.string().optional(),
+      body: z.string().optional(),
+      cc: z.string().array().optional(),
+      bcc: z.string().array().optional(),
+    })
+    .refine(data => (data.to && !data.messageId) || (!data.to && data.messageId), {
+      message: 'Either "to" or "messageId" must be provided, but not both.',
+      path: ['to', 'messageId'],
+    }),
 };

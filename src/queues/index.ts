@@ -3,6 +3,7 @@ import { redis } from '@/lib/cache';
 import {
   EmailJobData,
   GmailMessageJobData,
+  GmailMessageSyncJobData,
   GmailPushJobData as GmailPubSubJobData,
   IndexNoteJobData,
   InvokeAssistantJobData,
@@ -35,5 +36,9 @@ export const userAssistantInvocationQueue = new Queue<UserAssistantInvocationJob
 );
 
 export const indexNoteQueue = new Queue<IndexNoteJobData>('index-note', {
+  connection: redis,
+});
+
+export const syncGmailMessageQueue = new Queue<GmailMessageSyncJobData>('sync-gmail-message', {
   connection: redis,
 });
