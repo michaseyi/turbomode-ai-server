@@ -31,6 +31,7 @@ const fullMailMessageSchema = z.object({
   to: z.string().array(),
   subject: z.string().nullable(),
   cc: z.string().array(),
+  labelIds: z.string().array(),
   bcc: z.string().array(),
   body: z.string().nullable(),
   isUnread: z.boolean(),
@@ -125,7 +126,9 @@ export const integrationValidation = {
     date: z.string().datetime(),
   }),
 
-  gmailQuery: baseValidation.apiQuery.extend({}),
+  gmailQuery: baseValidation.apiQuery.extend({
+    sortBy: z.literal('internalDate').optional().default('internalDate'),
+  }),
 
   sendMailMessageSchema: z
     .object({

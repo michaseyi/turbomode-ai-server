@@ -52,36 +52,41 @@ export function parseGmailMessage(message: gmail_v1.Schema$Message): MailMessage
   const getHeader = (name: string) =>
     headers.find(h => h.name?.toLowerCase() === name.toLowerCase())?.value || null;
 
-  function getBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
-    if (!payload) return '';
-    if (payload.body?.data) {
-      return Buffer.from(payload.body.data, 'base64').toString('utf8');
-    }
-    if (payload.parts) {
-      for (const part of payload.parts) {
-        if (part.mimeType === 'text/plain' || part.mimeType === 'text/html') {
-          const content = getBody(part);
-          if (content) return content;
-        }
-      }
-    }
-    return '';
-  }
+  // function getBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
+  //   if (!payload) return '';
+  //   if (payload.body?.data) {
+  //     return Buffer.from(payload.body.data, 'base64').toString('utf8');
+  //   }
+  //   if (payload.parts) {
+  //     for (const part of payload.parts) {
+  //       if (part.mimeType === 'text/plain' || part.mimeType === 'text/html') {
+  //         const content = getBody(part);
+  //         if (content) return content;
+  //       }
+  //     }
+  //   }
+  //   return '';
+  // }
 
-  function _getBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
+  function getBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
     if (!payload) return '';
 
     if (payload.parts && payload.parts.length > 0) {
-      const textPart = payload.parts.find(
-        part => part.mimeType === 'text/plain' || part.mimeType === 'text/html'
-      );
+      const textPart = payload.parts.find(part => part.mimeType === 'text/plain');
 
+      const htmlPart = payload.parts.find(part => part.mimeType === 'text/html');
+
+      if (htmlPart && htmlPart.body && htmlPart.body.data) {
+        return Buffer.from(htmlPart.body.data, 'base64').toString('utf-8');
+      }
+
+      // fallback to text/plain if html is not available
       if (textPart && textPart.body && textPart.body.data) {
         return Buffer.from(textPart.body.data, 'base64').toString('utf-8');
       }
 
       for (const part of payload.parts) {
-        const nestedBody = _getBody(part);
+        const nestedBody = getBody(part);
         if (nestedBody) return nestedBody;
       }
     }
