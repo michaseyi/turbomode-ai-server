@@ -20,6 +20,12 @@ const fetchedIntegrations = z.union([
     type: z.literal(IntegrationType.Gmail),
     gmail: z.object({
       email: z.string().email(),
+      messageLabels: z
+        .object({
+          labelId: z.string(),
+          labelName: z.string(),
+        })
+        .array(),
     }),
   }),
 ]);
@@ -128,19 +134,18 @@ export const integrationValidation = {
 
   gmailQuery: baseValidation.apiQuery.extend({
     sortBy: z.literal('internalDate').optional().default('internalDate'),
+    labelId: z.string().optional(),
   }),
 
-  sendMailMessageSchema: z
-    .object({
-      to: z.string().email().optional(),
-      messageId: z.string().optional(),
-      subject: z.string().optional(),
-      body: z.string().optional(),
-      cc: z.string().array().optional(),
-      bcc: z.string().array().optional(),
-    })
-    .refine(data => (data.to && !data.messageId) || (!data.to && data.messageId), {
-      message: 'Either "to" or "messageId" must be provided, but not both.',
-      path: ['to', 'messageId'],
+  sendMailMessageSchema: z.union([
+    z.object({
+      to: z.string().email().array(),
+      subject: z.string(),
+      body: z.string(),
     }),
+    z.object({
+      messageId: z.string(),
+      body: z.string(),
+    }),
+  ]),
 };

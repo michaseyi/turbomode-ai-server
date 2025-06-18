@@ -37,7 +37,7 @@ model User {
 
 model Integration {
   id     String @id @default(cuid())
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
   type         IntegrationType
   enabled      Boolean         @default(true)
@@ -67,10 +67,13 @@ model GmailIntegration {
   emailProcessOption EmailProcessOption @default(All)
   specificAddresses String? // used in conjuction with emailProcssingOption
   messages GmailMessage[]
-
+  messageLabels GmailMessageLabel[]
   processAttachment Boolean @default(false)
   processThreadHistory Boolean @default(false)
 }
+
+
+
 
 model GoogleCalendarIntegration{
   id   String @id @default(cuid())
@@ -169,6 +172,16 @@ model GmailMessage {
 }
 
 
+
+model GmailMessageLabel {
+  id String @id @default(cuid())
+  gmailIntegrationId String
+  gmailIntegration GmailIntegration @relation(fields: [gmailIntegrationId], references: [id], onDelete: Cascade)
+  labelId String
+  labelName String
+
+  @@unique([gmailIntegrationId, labelId])
+}
 
 
 

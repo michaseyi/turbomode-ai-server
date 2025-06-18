@@ -18,7 +18,18 @@ export async function listIntegrations(
   const res = await db.integration.findMany({
     where: { userId },
     include: {
-      gmail: { select: { id: true, email: true } },
+      gmail: {
+        select: {
+          id: true,
+          email: true,
+          messageLabels: {
+            select: {
+              labelId: true,
+              labelName: true,
+            },
+          },
+        },
+      },
       gCalendar: { select: { id: true, email: true } },
     },
   });

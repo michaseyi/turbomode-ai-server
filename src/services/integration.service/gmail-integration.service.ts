@@ -10,6 +10,7 @@ import { GmailMessageSyncJobData } from '@/types/queue.type';
 import { dbUtils, googleUtils, loggerUtils, serviceUtils } from '@/utils';
 import { integrationValidation } from '@/validation';
 import { Auth, gmail_v1, google } from 'googleapis';
+import _ from 'lodash';
 import { z } from 'zod';
 
 export async function addGmailIntegration(
@@ -273,11 +274,72 @@ export async function sendGmailMessage(
 
     include: { gmail: true },
   });
+
   if (!integration || !integration.gmail) {
     return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.NotFound);
   }
 
-  return serviceUtils.createSuccessResult('Gmail message sent', undefined);
+  const oauth = googleUtils.createOauthClient();
+  oauth.setCredentials({
+    access_token: integration.gmail.accessToken,
+    refresh_token: integration.gmail.refreshToken,
+  });
+
+  const gmail = google.gmail({ version: 'v1', auth: oauth });
+
+  let raw;
+
+  const options: {
+    threadId?: string;
+  } = {};
+
+  if ('messageId' in payload) {
+    const messageId = payload.messageId;
+    const message = await db.gmailMessage.findUnique({
+      where: {
+        gmailIntegrationId: integration.gmail.id,
+        id: messageId,
+      },
+    });
+
+    if (!message) {
+      return serviceUtils.createErrorResult(
+        'Reference message not found',
+        ServiceErrorCode.NotFound
+      );
+    }
+
+    options.threadId = message.threadId!;
+
+    raw = googleUtils.createRawEmail({
+      to: message.to[0],
+      body: payload.body,
+      from: integration.gmail.email,
+      subject: '',
+    });
+  } else {
+    raw = googleUtils.createRawEmail({
+      to: payload.to[0],
+      body: payload.body,
+      from: integration.gmail.email,
+      subject: payload.subject,
+    });
+  }
+
+  try {
+    await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        ...options,
+        raw,
+      },
+    });
+
+    return serviceUtils.createSuccessResult('Gmail message sent', undefined);
+  } catch (error) {
+    loggerUtils.error('Error sending Gmail message', { error });
+    throw new Error('Unexpected error sending gmail message');
+  }
 }
 
 export async function fetchGmailMessages(
@@ -299,11 +361,21 @@ export async function fetchGmailMessages(
     return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.NotFound);
   }
 
+  const labelId = query.labelId;
+
+  const queryWithoutLabelId = _.omit(query, ['labelId']);
+
   const { data, pagination } = await dbUtils.paginateV2(
     db.gmailMessage,
     {
-      ...(<any>query),
+      ...(<any>queryWithoutLabelId),
       gmailIntegrationId: integration.gmail.id,
+
+      labelIds: labelId
+        ? {
+            hasSome: [labelId],
+          }
+        : undefined,
     },
     {
       omit: {
@@ -374,6 +446,39 @@ export async function syncGmailMessagesJobHandler(data: GmailMessageSyncJobData)
   });
 
   const gmail = google.gmail({ version: 'v1', auth: oauth });
+
+  // fetch labels
+
+  const labelsResponse = await gmail.users.labels.list({
+    userId: 'me',
+  });
+
+  if (labelsResponse.status !== 200) {
+    loggerUtils.error('Failed to fetch Gmail labels', {
+      gmailIntegrationId,
+      status: labelsResponse.status,
+    });
+    throw new Error('Failed to fetch Gmail labels');
+  }
+
+  const labels = labelsResponse.data.labels || [];
+
+  for (const label of labels) {
+    await db.gmailMessageLabel.upsert({
+      where: {
+        gmailIntegrationId,
+        id: label.id!,
+      },
+      update: {
+        labelName: label.name!,
+      },
+      create: {
+        gmailIntegrationId,
+        labelId: label.id!,
+        labelName: label.name!,
+      },
+    });
+  }
 
   loggerUtils.debug('Beginning Gmail messages sync...', { gmailIntegrationId });
 

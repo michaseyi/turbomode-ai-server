@@ -355,28 +355,37 @@ integrationRouter.openapi(
 //   })
 // );
 
-// integrationRouter.openapi(
-//   createRoute({
-//     method: 'post',
-//     path: '/gmail/{integrationId}/messages/send',
-//     description: 'Send or reply a gmail message',
-//     tags: ['Integration'],
-//     request: {
-//       params: integrationValidation.gmailIntegrationParamSchema,
-//     },
-//     responses: {
-//       200: {
-//         description: 'Success',
-//         content: {
-//           'application/json': {
-//             schema: baseValidation.apiResponse,
-//           },
-//         },
-//       },
-//       ...routeUtils.errorResponses,
-//     },
-//   })
-// );
+integrationRouter.openapi(
+  createRoute({
+    method: 'post',
+    path: '/gmail/{integrationId}/messages/send',
+    description: 'Send or reply a gmail message',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.integrationBaseParams,
+      required: true,
+      body: {
+        content: {
+          'application/json': {
+            schema: integrationValidation.sendMailMessageSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  integrationController.sendGmailMessage
+);
 
 integrationRouter.openapi(
   createRoute({

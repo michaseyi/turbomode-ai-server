@@ -320,3 +320,27 @@ export async function syncGmailMessages(
 
   return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
 }
+
+export async function sendGmailMessage(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.integrationBaseParams>;
+        json: z.infer<typeof integrationValidation.sendMailMessageSchema>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+  const { integrationId } = c.req.valid('param');
+  const body = c.req.valid('json');
+
+  const result = await integrationService.sendGmailMessage(user.id, integrationId, body);
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}
