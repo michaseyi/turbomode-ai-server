@@ -1,7 +1,7 @@
 import { emailDataSourceTemplate } from '@/lib/assistant/prompts';
 import { db, EmailProcessOption, IntegrationType } from '@/lib/db';
 import { gmailMessageQueue, gmailPubSubQueue, invokeAgentQueue } from '@/queues';
-import { ServiceResult } from '@/types';
+import { ServiceErrorCode, ServiceResult } from '@/types';
 import { GmailMessageJobData, GmailPushJobData } from '@/types/queue.type';
 import { googleUtils, loggerUtils, serviceUtils } from '@/utils';
 import { integrationValidation } from '@/validation';
@@ -12,6 +12,91 @@ import { z } from 'zod';
 export * from './gmail-integration.service';
 export * from './gcalendar-integration.service';
 
+export async function reconnectGoogleIntegration(
+  userId: string,
+  integrationId: string,
+  body: z.infer<typeof integrationValidation.addGoogleIntegration>
+): Promise<ServiceResult> {
+  const { code } = body;
+
+  const integration = await db.integration.findUnique({
+    where: {
+      id: integrationId,
+      userId,
+      type: { in: [IntegrationType.Gcalendar, IntegrationType.Gmail] },
+    },
+    include: { gmail: true, gCalendar: true },
+  });
+
+  if (!integration) {
+    return serviceUtils.createErrorResult('Integration not found', ServiceErrorCode.NotFound);
+  }
+
+  const oauth2Client = googleUtils.createOauthClient();
+
+  loggerUtils.debug('getting tokens...');
+
+  let tokens;
+
+  try {
+    const res = await oauth2Client.getToken(code);
+    tokens = res.tokens;
+  } catch (error) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
+
+  if (!tokens.refresh_token || !tokens.access_token) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
+
+  loggerUtils.debug('setting tokens...');
+  oauth2Client.setCredentials(tokens);
+
+  const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+
+  loggerUtils.debug('getting email info...');
+  let email;
+
+  try {
+    const { data } = await oauth2.userinfo.get();
+    email = data.email;
+  } catch (error) {
+    return serviceUtils.createErrorResult('Invalid token', ServiceErrorCode.Bad);
+  }
+
+  if (!email) {
+    // should not occur excepts email was not included in the scope
+    return serviceUtils.createErrorResult('Email not included in scope', ServiceErrorCode.Bad);
+  }
+
+  const refreshToken = tokens.refresh_token;
+  const accessToken = tokens.access_token;
+
+  const refEmail = integration.gCalendar?.email || integration.gmail?.email;
+
+  if (email !== refEmail) {
+    return serviceUtils.createErrorResult(
+      'Email does not match the existing integration',
+      ServiceErrorCode.Bad
+    );
+  }
+
+  return await db.$transaction(async tx => {
+    if (integration.type === IntegrationType.Gcalendar) {
+      await tx.googleCalendarIntegration.update({
+        where: { integrationId: integration.id },
+        data: { refreshToken, accessToken },
+      });
+    } else if (integration.type === IntegrationType.Gmail) {
+      await tx.gmailIntegration.update({
+        where: { integrationId: integration.id },
+        data: { refreshToken, accessToken },
+      });
+    }
+
+    return serviceUtils.createSuccessResult('Integration reconnected', undefined);
+  });
+}
 export async function listIntegrations(
   userId: string
 ): Promise<ServiceResult<Array<z.infer<typeof integrationValidation.fetchedIntegrations>>>> {

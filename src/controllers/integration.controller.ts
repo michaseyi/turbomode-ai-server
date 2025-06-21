@@ -10,7 +10,7 @@ import { Context } from 'hono';
 import { z } from 'zod';
 
 export async function addGmailIntegration(
-  c: Context<{}, any, { out: { json: AddGoogleIntegrationPayload } }>
+  c: Context<any, any, { out: { json: AddGoogleIntegrationPayload } }>
 ) {
   const user = c.get('user')!;
 
@@ -25,8 +25,35 @@ export async function addGmailIntegration(
   return controllerUtils.createSuccessResponse(c, result.message, result.data, 201);
 }
 
+export async function reconnectGoogleIntegration(
+  c: Context<
+    any,
+    any,
+    {
+      out: {
+        param: z.infer<typeof integrationValidation.integrationBaseParams>;
+        json: z.infer<typeof integrationValidation.addGoogleIntegration>;
+      };
+    }
+  >
+) {
+  const user = c.get('user')!;
+
+  const body = c.req.valid('json');
+
+  const { integrationId } = c.req.valid('param');
+
+  const result = await integrationService.reconnectGoogleIntegration(user.id, integrationId, body);
+
+  if (!result.ok) {
+    return controllerUtils.createErrorResponse(c, result.message, 400);
+  }
+
+  return controllerUtils.createSuccessResponse(c, result.message, result.data, 200);
+}
+
 export async function addGoogleCalendarIntegration(
-  c: Context<{}, any, { out: { json: AddGoogleIntegrationPayload } }>
+  c: Context<any, any, { out: { json: AddGoogleIntegrationPayload } }>
 ) {
   const user = c.get('user')!;
 

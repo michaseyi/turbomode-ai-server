@@ -467,6 +467,69 @@ integrationRouter.openapi(
 integrationRouter.openapi(
   createRoute({
     method: 'post',
+    path: '/gmail/{integrationId}/reconnect',
+    description: 'Reconnect gmail integration',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.integrationBaseParams,
+      body: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: integrationValidation.addGoogleIntegration,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  integrationController.reconnectGoogleIntegration
+);
+integrationRouter.openapi(
+  createRoute({
+    method: 'post',
+    path: '/google-calendar/{integrationId}/reconnect',
+    description: 'Reconnect google calendar integration',
+    tags: ['Integration'],
+    request: {
+      params: integrationValidation.integrationBaseParams,
+      body: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: integrationValidation.addGoogleIntegration,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: baseValidation.apiResponse,
+          },
+        },
+      },
+      ...routeUtils.errorResponses,
+    },
+  }),
+  integrationController.reconnectGoogleIntegration
+);
+
+integrationRouter.openapi(
+  createRoute({
+    method: 'post',
     path: '/google-calendar/{integrationId}/events/sync',
     description: 'Sync calendar events',
     tags: ['Integration'],
