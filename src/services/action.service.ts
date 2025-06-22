@@ -340,6 +340,7 @@ function transformMessagesForUI(
         ? new Date(msg.additional_kwargs.timestamp as string)
         : new Date(),
       metadata: {
+        context: msg.additional_kwargs?.context,
         isChunk: msg instanceof AIMessageChunk,
         chunkCount: msg.additional_kwargs?.chunks,
         toolCalls: msg.additional_kwargs?.tool_calls,
@@ -364,7 +365,7 @@ export async function fetchActionMessageHistory(
     state.values.messages || []
   );
 
-  console.log(state.values.messages);
+  console.log(messages);
 
   return serviceUtils.createSuccessResult('History fetched', messages);
 }
@@ -410,7 +411,12 @@ export async function streamAction(
         {
           userId,
           actionId,
-          prompt: [...messages, new HumanMessage(prompt)],
+          prompt: [
+            ...messages,
+            new HumanMessage(prompt, {
+              context,
+            }),
+          ],
         },
         signal
       )
