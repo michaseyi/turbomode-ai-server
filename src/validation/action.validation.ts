@@ -1,5 +1,6 @@
 import { ActionTrigger } from '@prisma/client';
 import { z } from 'zod';
+import { agentValidation } from './agent.validation';
 
 export const actionValidation = {
   fetchedAction: z.object({
@@ -12,6 +13,15 @@ export const actionValidation = {
 
   streamQuery: z.object({
     prompt: z.string().optional(),
+    context: z
+      .string()
+      .transform(val => {
+        const parsed = JSON.parse(val);
+        return agentValidation.invokeAgentSchema.pick({ context: true }).parse({
+          context: parsed,
+        }).context;
+      })
+      .optional(),
   }),
 
   createAction: z.object({

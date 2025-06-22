@@ -169,7 +169,8 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
     streaming: true,
 
     // model: 'mistral-saba-24b',
-    model: 'qwen-qwq-32b',
+    // model: 'qwen-qwq-32b',
+    model: 'qwen/qwen3-32b',
     // model: 'gemma2-9b-it',
     // model: 'llama-3.1-8b-instant',
     // temperature: 0.7,
@@ -200,6 +201,8 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
 }
 
 export const llm = new ChatGroq({
-  model: 'gemma2-9b-it',
+  // model: 'gemma2-9b-it',
+  model: 'llama-3.1-8b-instant',
+  // model: 'qwen/qwen3-32b',
   apiKey: config.env.GROQ_API_KEY,
 });

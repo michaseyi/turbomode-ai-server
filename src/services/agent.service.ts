@@ -4,10 +4,16 @@ import { loggerUtils, serviceUtils } from '@/utils';
 import { agentValidation } from '@/validation';
 import { z } from 'zod';
 import { noteService } from '.';
-import { buildAssistant } from '@/lib/assistant/v1';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { calendarAgentTemplate } from '@/lib/assistant/prompts';
+import { buildAssistant, llm } from '@/lib/assistant/v1';
+import {
+  calendarAgentBackStory,
+  emailReplyAgentBackStory,
+  structuredOutputBackstory,
+  summaryAgentBackStory,
+} from '@/lib/assistant/prompts';
 import { nanoid } from 'nanoid';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { htmlToText } from 'html-to-text';
 
 const agent = await buildAssistant({}).then(graph => {
   loggerUtils.info('agent compiled');
@@ -18,7 +24,8 @@ type AgentInfo = {
   id: string;
   name: string;
   description: string;
-  template: ChatPromptTemplate;
+  systemMessage: string;
+  structuredOutputSchema: z.ZodType;
 };
 
 type AgentContext = {
@@ -33,7 +40,14 @@ const agentMappings: Map<string, AgentInfo> = new Map([
       id: 'calendar-agent',
       name: 'Calendar Agent',
       description: 'An agent that can manage calendar events, appointments, and reminders.',
-      template: calendarAgentTemplate,
+      systemMessage: calendarAgentBackStory,
+      structuredOutputSchema: z.object({
+        summary: z.string(),
+        start: z.string(),
+        end: z.string(),
+        eventLink: z.string().url(),
+        location: z.string().optional(),
+      }),
     },
   ],
 
@@ -44,7 +58,13 @@ const agentMappings: Map<string, AgentInfo> = new Map([
       name: 'Research Agent',
       description:
         'An agent that can perform research tasks, gather information, and summarize findings.',
-      template: calendarAgentTemplate,
+      systemMessage: calendarAgentBackStory,
+      structuredOutputSchema: z.object({
+        summary: z.string(),
+        start: z.string(),
+        end: z.string(),
+        location: z.string().optional(),
+      }),
     },
   ],
 
@@ -54,16 +74,27 @@ const agentMappings: Map<string, AgentInfo> = new Map([
       id: 'summarization-agent',
       name: 'Summarization Agent',
       description: 'An agent that can summarize documents, articles, and other text content.',
-      template: calendarAgentTemplate,
+      systemMessage: summaryAgentBackStory,
+      structuredOutputSchema: z.object({
+        summary: z.string(),
+      }),
     },
   ],
   [
-    'email-compose-agent',
+    'email-reply-agent',
     {
-      id: 'email-compose-agent',
+      id: 'email-reply-agent',
       name: 'Email Compose Agent',
       description: 'An agent that can assist with composing and managing emails.',
-      template: calendarAgentTemplate,
+      systemMessage: emailReplyAgentBackStory,
+      structuredOutputSchema: z.object({
+        subject: z.string().describe('The subject of the email'),
+        body: z
+          .string()
+          .describe(
+            'The body content of the email in html format, retain the html format has in the input'
+          ),
+      }),
     },
   ],
 ]);
@@ -130,10 +161,18 @@ export async function buildContext(
               `Email message with ID ${messageId} not found for integration ${integrationId}`
             );
           }
+          const cleanText = htmlToText(message.body || '', {
+            wordwrap: 130,
+            selectors: [
+              { selector: 'a', options: { ignoreHref: false } },
+              { selector: 'img', format: 'skip' },
+              { selector: 'table', options: { uppercaseHeaderCells: false } },
+            ],
+          });
 
           return {
             source: 'email',
-            content: message.body || '',
+            content: cleanText,
             metadata: {
               subject: message.subject,
               from: message.from,
@@ -253,11 +292,6 @@ export async function invokeAgent(
     return serviceUtils.createErrorResult(builtContext.message, ServiceErrorCode.Bad);
   }
 
-  const invokedTemplate = await agentInfo.template.invoke({
-    context: builtContext.data,
-    userMessage: prompt || '',
-  });
-
   const config = {
     configurable: {
       user: user!,
@@ -265,15 +299,35 @@ export async function invokeAgent(
     },
   };
 
-  const state = await agent.invoke({ messages: invokedTemplate.messages }, config);
+  const state = await agent.invoke(
+    {
+      messages: [
+        agentInfo.systemMessage,
+        new SystemMessage(
+          `Attached infromation from user below: \n ${JSON.stringify(builtContext.data)}`
+        ),
+        new HumanMessage(prompt || ''),
+      ],
+    },
+    config
+  );
 
-  console.log(JSON.stringify(state.messages, null, 2));
+  console.log(state.messages);
 
-  return serviceUtils.createSuccessResult('Agent invoked', state.messages.at(-1)!);
+  const out = await llm
+    .withStructuredOutput(agentInfo.structuredOutputSchema)
+    .invoke(
+      (await structuredOutputBackstory.invoke({ input: state.messages.at(-1)!.content })).messages
+    );
+
+  return serviceUtils.createSuccessResult('Agent invoked', out);
 }
 
 export async function listAgents(
   _userId: string
 ): Promise<ServiceResult<z.infer<typeof agentValidation.listAgentsResponseSchema>>> {
-  return serviceUtils.createSuccessResult('Agents fetched', [...agentMappings.values()]);
+  return serviceUtils.createSuccessResult(
+    'Agents fetched',
+    agentValidation.listAgentsResponseSchema.parse([...agentMappings.values()])
+  );
 }

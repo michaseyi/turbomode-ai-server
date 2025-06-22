@@ -24,7 +24,7 @@ export type InvokeAssistantJobData = {
 export type UserAssistantInvocationJobData = {
   userId: string;
   actionId: string;
-  prompt: BaseMessage;
+  prompt: Array<BaseMessage>;
   context?: Record<string, any>;
 };
 

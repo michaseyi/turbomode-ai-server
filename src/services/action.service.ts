@@ -15,6 +15,7 @@ import {
   ToolMessage,
 } from '@langchain/core/messages';
 import { z } from 'zod';
+import { agentService } from '.';
 
 const assistant = await buildAssistant({}).then(graph => {
   loggerUtils.info('assistant complied');
@@ -141,7 +142,7 @@ export async function requestCompletion(data: UserAssistantInvocationJobData) {
   const { push, cleanup } = await startAgentStream(userId, actionId);
 
   const stream = await assistant.stream(
-    { messages: [prompt] },
+    { messages: prompt },
     { streamMode: 'messages', ...config }
   );
 
@@ -197,7 +198,7 @@ export async function requestCompletionDirect(
   async function* streamCreator() {
     if (action.title === 'New Action') {
       const out = await llm.invoke(
-        (await titleTemplate.invoke({ userMessage: prompt.content })).messages
+        (await titleTemplate.invoke({ userMessage: prompt.at(-1)!.content })).messages
       );
 
       await db.action.update({
@@ -217,7 +218,7 @@ export async function requestCompletionDirect(
     }
 
     const stream = await assistant.stream(
-      { messages: [prompt] },
+      { messages: prompt },
       { streamMode: 'messages', ...config, signal }
     );
 
@@ -371,10 +372,12 @@ export async function fetchActionMessageHistory(
 export async function streamAction(
   userId: string,
   actionId: string,
-  prompt: string | null,
+  input: z.infer<typeof actionValidation.streamQuery>,
   signal: AbortSignal
 ): Promise<ServiceResult<AsyncGenerator<z.infer<typeof actionValidation.actionMessage>> | false>> {
   const action = await db.action.findUnique({ where: { id: actionId, userId } });
+
+  const { prompt, context } = input;
 
   if (!action) {
     return serviceUtils.createErrorResult('Action not found', ServiceErrorCode.Bad);
@@ -384,6 +387,22 @@ export async function streamAction(
   //   return serviceUtils.createSuccessResult('Action not active', false);
   // }
 
+  const messages: BaseMessage[] = [];
+
+  if (context) {
+    const contextBuildResult = await agentService.buildContext(userId, context);
+
+    if (!contextBuildResult.ok) {
+      return serviceUtils.createErrorResult(contextBuildResult.message, ServiceErrorCode.Bad);
+    }
+
+    const builtContext = contextBuildResult.data;
+
+    messages.push(
+      new SystemMessage(`Attached information from user below: \n ${JSON.stringify(builtContext)}}`)
+    );
+  }
+
   if (prompt) {
     return serviceUtils.createSuccessResult(
       'Action stream connected',
@@ -391,7 +410,7 @@ export async function streamAction(
         {
           userId,
           actionId,
-          prompt: new HumanMessage(prompt),
+          prompt: [...messages, new HumanMessage(prompt)],
         },
         signal
       )

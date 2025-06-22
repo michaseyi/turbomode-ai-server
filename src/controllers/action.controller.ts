@@ -43,12 +43,7 @@ export async function streamAction2(
 
   const query = c.req.valid('query');
 
-  const result = await actionService.streamAction(
-    user.id,
-    actionId,
-    query.prompt || null,
-    c.req.raw.signal
-  );
+  const result = await actionService.streamAction(user.id, actionId, query, c.req.raw.signal);
 
   if (!result.ok) {
     return controllerUtils.createErrorResponse(c, result.message, 400);
@@ -82,12 +77,9 @@ export async function streamAction(
   const { actionId } = c.req.valid('param');
   const query = c.req.valid('query');
 
-  const result = await actionService.streamAction(
-    user.id,
-    actionId,
-    query.prompt || null,
-    c.req.raw.signal
-  );
+  const input = query;
+
+  const result = await actionService.streamAction(user.id, actionId, input, c.req.raw.signal);
 
   if (!result.ok) {
     return controllerUtils.createErrorResponse(c, result.message, 400);

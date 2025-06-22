@@ -6,103 +6,130 @@ import { google } from 'googleapis';
 import assert from 'node:assert';
 import { z } from 'zod';
 import { ensureConfiguration } from '../assistant/configuration';
-import { gmail } from 'googleapis/build/src/apis/gmail';
+import { htmlToText } from 'html-to-text';
 
-export const addCalenderEvent = tool(
-  async ({ description, startTime, endTime, summary }, config) => {
-    const gCalendarIntegration = ensureConfiguration(config).user.integrations.find(
-      ({ type }) => type === IntegrationType.Gcalendar
-    )?.gCalendar;
+// export const addCalenderEvent = tool(
+//   async ({ description, startTime, endTime, summary, attendees }, config) => {
+//     const user = ensureConfiguration(config).user;
+//     const gCalendarIntegration = user.integrations.find(
+//       ({ type }) => type === IntegrationType.Gcalendar
+//     )?.gCalendar;
 
-    if (!gCalendarIntegration) {
-      return {
-        success: false,
-        message: messages.tools.NOT_CONFIGURED,
-      };
-    }
+//     if (!gCalendarIntegration) {
+//       return {
+//         success: false,
+//         message: messages.tools.NOT_CONFIGURED,
+//       };
+//     }
 
-    const { accessToken, refreshToken } = gCalendarIntegration;
+//     const { accessToken, refreshToken } = gCalendarIntegration;
 
-    assert(accessToken, 'gCalendar integration must include accessToken');
-    assert(refreshToken, 'gCalendar integration must include refreshToken');
+//     assert(accessToken, 'gCalendar integration must include accessToken');
+//     assert(refreshToken, 'gCalendar integration must include refreshToken');
 
-    const oauthClient = googleUtils.createOauthClient();
+//     const oauthClient = googleUtils.createOauthClient();
 
-    oauthClient.setCredentials({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
+//     oauthClient.setCredentials({
+//       access_token: accessToken,
+//       refresh_token: refreshToken,
+//     });
 
-    const calendar = google.calendar({ version: 'v3', auth: oauthClient });
+//     const calendar = google.calendar({ version: 'v3', auth: oauthClient });
 
-    try {
-      const response = await calendar.events.insert({
-        calendarId: 'primary',
-        requestBody: {
-          summary,
-          description: `Created by your assistant. \n\n${description}`,
-          start: { dateTime: startTime },
-          end: { dateTime: endTime },
-          extendedProperties: {
-            private: {
-              createdBy: 'agent',
-              agentVersion: '1.0.0',
-            },
-          },
-        },
-      });
+//     try {
+//       const response = await calendar.events.insert({
+//         calendarId: 'primary',
+//         requestBody: {
+//           summary,
+//           description: `Created by your assistant. \n\n${description}`,
+//           start: { dateTime: startTime },
+//           end: { dateTime: endTime },
+//           attendees: [
+//             {
+//               email: gCalendarIntegration.email,
+//               displayName: user.firstName + ' ' + user.lastName,
+//             },
+//             ...attendees.filter(attendee => attendee.email !== gCalendarIntegration.email),
+//           ],
+//           extendedProperties: {
+//             private: {
+//               createdBy: 'agent',
+//               agentVersion: '1.0.0',
+//             },
+//           },
+//         },
+//       });
 
-      loggerUtils.info(`Google calendar event added`);
+//       loggerUtils.info(`Google calendar event added`);
 
-      return {
-        success: true,
-        message: 'Event created successfully',
-        data: {
-          eventLink: response.data.htmlLink,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to create event - ${typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'}`,
-      };
-    }
-  },
-  {
-    name: 'set_reminder',
-    description: `
-      Creates a calendar event for the user at a specified date and time using Google Calendar.
-      This tool should be used when the user wants to set a reminder, book a future event, or schedule a task.
-      It requires an exact future start and end time in ISO 8601 format (e.g., '2025-05-15T09:30:00.000Z').
-      If the user provides a relative time (e.g., "in 2 hours", "next Monday"), first convert it to an absolute timestamp using 'get_current_datetime'.
-      The reminder message should clearly describe what the user wants to be reminded of.
-    `,
-    schema: z.object({
-      startTime: z
-        .string()
-        .datetime()
-        .describe(
-          'The exact starting date and time of the event in ISO 8601 format (e.g., "2025-05-15T09:30:00.000Z"). Must be in the future.'
-        ),
-      endTime: z
-        .string()
-        .datetime()
-        .describe(
-          'The exact ending date and time of the event in ISO 8601 format. Must be later than startTime.'
-        ),
-      summary: z
-        .string()
-        .describe(
-          'A short title or subject for the event (e.g., "Doctor Appointment", "Team Meeting"). This is what appears as the main label in the calendar.'
-        ),
-      description: z
-        .string()
-        .describe(
-          'A detailed description of the event or reminder. Include all necessary context or instructions the user may need when the event occurs.'
-        ),
-    }),
-  }
-);
+//       return {
+//         success: true,
+//         message: 'Event created successfully',
+//         data: {
+//           eventLink: response.data.htmlLink,
+//         },
+//       };
+//     } catch (error) {
+//       console.error(error);
+//       return {
+//         success: false,
+//         message: `Failed to create event - ${typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'}`,
+//       };
+//     }
+//   },
+//   {
+//     name: 'set_reminder',
+//     description: `
+//       Creates a calendar event for the user at a specified date and time using Google Calendar.
+//       This tool should be used when the user wants to set a reminder, book a future event, or schedule a task.
+//       It requires an exact future start and end time in ISO 8601 format (e.g., '2025-05-15T09:30:00.000Z').
+//       If the user provides a relative time (e.g., "in 2 hours", "next Monday"), first convert it to an absolute timestamp using 'get_current_datetime'.
+//       The reminder message should clearly describe what the user wants to be reminded of.
+//     `,
+//     schema: z.object({
+//       attendees: z
+//         .array(
+//           z
+//             .object({
+//               email: z.string().email().describe('Email address of the attendee.'),
+//               displayName: z
+//                 .string()
+//                 .optional()
+//                 .describe(
+//                   'Display name of the attendee. This field is optional but recommended if you can get the name.'
+//                 ),
+//             })
+//             .describe('Attendee object with email and optional display name')
+//         )
+//         .describe(
+//           'List of attendees objects to invite to the event. Each attendee must have a valid email and display name (optional).'
+//         ),
+
+//       startTime: z
+//         .string()
+//         .datetime()
+//         .describe(
+//           'The exact starting date and time of the event in ISO 8601 format with timezone information (e.g., "2025-05-15T09:30:00.000Z"). Must be in the future.'
+//         ),
+//       endTime: z
+//         .string()
+//         .datetime()
+//         .describe(
+//           'The exact ending date and time of the event in ISO 8601 format with timezone information (e.g., "2025-05-15T09:30:00.000Z"). Must be later than startTime.'
+//         ),
+//       summary: z
+//         .string()
+//         .describe(
+//           'A short title or subject for the event (e.g., "Doctor Appointment", "Team Meeting"). This is what appears as the main label in the calendar. This information will be visible in the calendar event details to all attendees.'
+//         ),
+//       description: z
+//         .string()
+//         .describe(
+//           'A detailed description of the event or reminder. Include all necessary context or instructions the user may need when the event occurs. This information will be visible in the calendar event details to all attendees.'
+//         ),
+//     }),
+//   }
+// );
 
 export const listGmailLabels = tool(
   async (_, config) => {
@@ -385,10 +412,19 @@ export const getGmailMessageDetails = tool(
 
       const parsed = googleUtils.parseGmailMessage(full.data);
 
+      const cleanText = htmlToText(parsed.body, {
+        wordwrap: 130,
+        selectors: [
+          { selector: 'a', options: { ignoreHref: false } },
+          { selector: 'img', format: 'skip' },
+          { selector: 'table', options: { uppercaseHeaderCells: false } },
+        ],
+      });
+
       return {
         success: true,
         message: 'Fetched full message details.',
-        data: parsed,
+        data: { ...parsed, body: cleanText },
       };
     } catch (error) {
       return {
@@ -501,81 +537,81 @@ Optional — omit to include all future events. Example: "2025-06-01T00:00:00.00
   }
 );
 
-export const sendGmailMessage = tool(
-  async ({ to, body, subject, threadId }, config) => {
-    const _ = ensureConfiguration(config);
+// export const sendGmailMessage = tool(
+//   async ({ to, body, subject, threadId }, config) => {
+//     const _ = ensureConfiguration(config);
 
-    const gmailIntegration = _.user.integrations.find(({ type }) => type === IntegrationType.Gmail);
+//     const gmailIntegration = _.user.integrations.find(({ type }) => type === IntegrationType.Gmail);
 
-    if (!gmailIntegration || !gmailIntegration.gmail) {
-      return {
-        success: false,
-        message: messages.tools.NOT_CONFIGURED,
-      };
-    }
+//     if (!gmailIntegration || !gmailIntegration.gmail) {
+//       return {
+//         success: false,
+//         message: messages.tools.NOT_CONFIGURED,
+//       };
+//     }
 
-    const oauthClient = googleUtils.createOauthClient();
+//     const oauthClient = googleUtils.createOauthClient();
 
-    const { accessToken, refreshToken } = gmailIntegration.gmail;
+//     const { accessToken, refreshToken } = gmailIntegration.gmail;
 
-    assert(accessToken, 'gmail integration must include accessToken');
-    assert(refreshToken, 'gmail integration must include refreshToken');
+//     assert(accessToken, 'gmail integration must include accessToken');
+//     assert(refreshToken, 'gmail integration must include refreshToken');
 
-    oauthClient.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+//     oauthClient.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
 
-    const gmail = google.gmail({ version: 'v1', auth: oauthClient });
+//     const gmail = google.gmail({ version: 'v1', auth: oauthClient });
 
-    try {
-      const res = await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          threadId,
-          raw: googleUtils.createRawEmail({
-            to,
-            from: gmailIntegration.gmail.email,
-            body,
-            subject,
-          }),
-        },
-      });
+//     try {
+//       const res = await gmail.users.messages.send({
+//         userId: 'me',
+//         requestBody: {
+//           threadId,
+//           raw: googleUtils.createRawEmail({
+//             to,
+//             from: gmailIntegration.gmail.email,
+//             body,
+//             subject,
+//           }),
+//         },
+//       });
 
-      loggerUtils.info(`Email sent to ${to} with subject "${subject}"`);
+//       loggerUtils.info(`Email sent to ${to} with subject "${subject}"`);
 
-      return {
-        success: true,
-        message: `Email sent successfully to ${to}`,
-        data: { messageId: res.data.id },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to send email - ${
-          typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'
-        }`,
-      };
-    }
-  },
-  {
-    name: 'send_gmail_message',
-    schema: z.object({
-      to: z.string().email().describe('Recipient email address'),
-      subject: z.string().describe('Email subject line'),
-      body: z.string().describe('Email body content in plain text or HTML format'),
-      threadId: z
-        .string()
-        .optional()
-        .describe('Optional thread ID to reply to an existing email, '),
-    }),
+//       return {
+//         success: true,
+//         message: `Email sent successfully to ${to}`,
+//         data: { messageId: res.data.id },
+//       };
+//     } catch (error) {
+//       return {
+//         success: false,
+//         message: `Failed to send email - ${
+//           typeof error === 'object' && error && 'message' in error ? error.message : 'Unknown error'
+//         }`,
+//       };
+//     }
+//   },
+//   {
+//     name: 'send_gmail_message',
+//     schema: z.object({
+//       to: z.string().email().describe('Recipient email address'),
+//       subject: z.string().describe('Email subject line'),
+//       body: z.string().describe('Email body content in plain text or HTML format'),
+//       threadId: z
+//         .string()
+//         .optional()
+//         .describe('Optional thread ID to reply to an existing email, '),
+//     }),
 
-    description: `
-      Sends an email using the user's Gmail account.
-      This tool should be used when the user wants to send an email to someone.
-      It requires the recipient's email address, subject, and body content.
-      The body can be plain text or HTML.
+//     description: `
+//       Sends an email using the user's Gmail account.
+//       This tool should be used when the user wants to send an email to someone.
+//       It requires the recipient's email address, subject, and body content.
+//       The body can be plain text or HTML.
 
-      You can pass in the 'threadId' to reply to an existing email thread.
-      If 'threadId' is provided, the email will be sent as a reply to that thread.
-      If 'threadId' is not provided, a new email will be created.
-    `,
-  }
-);
+//       You can pass in the 'threadId' to reply to an existing email thread.
+//       If 'threadId' is provided, the email will be sent as a reply to that thread.
+//       If 'threadId' is not provided, a new email will be created.
+//     `,
+//   }
+// );
