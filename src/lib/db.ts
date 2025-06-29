@@ -42,6 +42,6 @@ export async function initDb(): Promise<void> {
     loggerUtils.info('database connection established');
   } catch (error) {
     loggerUtils.error('failed to connect to database:', error);
-    process.exit(1);
+    // process.exit(1);
   }
 }
