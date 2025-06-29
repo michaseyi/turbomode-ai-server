@@ -1,7 +1,7 @@
 import { startApp } from '@/server/app';
 import { loggerUtils } from '@/utils';
 
-// import '@/worker'; // run worker alongside server for testing
+import '@/worker'; // run worker alongside server for testing
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
   loggerUtils.error('unhandled rejection at', promise, 'reason:', reason);
