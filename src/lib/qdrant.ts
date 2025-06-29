@@ -4,6 +4,7 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 
 export const qdrantClient = new QdrantClient({
   url: config.env.QDRANT_URL,
+  apiKey: config.env.QDRANT_API_KEY,
 });
 
 qdrantClient

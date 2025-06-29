@@ -30,6 +30,9 @@ const envConfigSchema = z.object({
   PINECONE_API_KEY: z.string(),
 
   QDRANT_URL: z.string(),
+  QDRANT_API_KEY: z.string().optional(),
+
+  REDIS_URL: z.string(),
 
   FRONTEND_URL: z.string(),
 });
@@ -56,4 +59,6 @@ export const env = envConfigSchema.parse({
   TAVILY_API_KEY: process.env.TAVILY_API_KEY,
   PINECONE_API_KEY: process.env.PINECONE_API_KEY,
   QDRANT_URL: process.env.QDRANT_URL,
+  REDIS_URL: process.env.REDIS_URL,
+  QDRANT_API_KEY: process.env.QDRANT_API_KEY,
 });

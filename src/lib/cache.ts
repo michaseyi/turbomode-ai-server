@@ -1,10 +1,8 @@
+import { env } from '@/config';
 import { loggerUtils } from '@/utils';
 import { Redis } from 'ioredis';
 
-export const redis = new Redis({
-  host: 'localhost',
-  port: 6379,
-  db: 0,
+export const redis = new Redis(env.REDIS_URL, {
   maxRetriesPerRequest: null,
 });
 

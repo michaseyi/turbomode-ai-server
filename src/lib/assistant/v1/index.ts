@@ -16,6 +16,7 @@ import { DynamicTool, StructuredToolInterface, tool } from '@langchain/core/tool
 import { RunnableToolLike } from '@langchain/core/runnables';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ConfigurationSchema } from '../configuration';
+import { loggerUtils } from '@/utils';
 
 const messages = [
   new SystemMessage(`
@@ -163,7 +164,11 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
     schema: 'agent',
   });
 
-  await checkpointer.setup();
+  try {
+    await checkpointer.setup();
+  } catch (error) {
+    loggerUtils.error('Failed to setup checkpointer', { error });
+  }
 
   const llm = new ChatGroq({
     streaming: true,
