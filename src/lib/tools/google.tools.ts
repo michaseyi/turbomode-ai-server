@@ -1,5 +1,5 @@
 import { messages } from '@/config/constants';
-import { googleUtils, loggerUtils } from '@/utils';
+import { googleUtils } from '@/utils';
 import { tool } from '@langchain/core/tools';
 import { IntegrationType } from '@prisma/client';
 import { google } from 'googleapis';

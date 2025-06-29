@@ -4,7 +4,7 @@ import { loggerUtils } from '@/utils';
 import {
   EmailJobData,
   GmailMessageJobData,
-  GmailMessageSyncJobData,
+  // GmailMessageSyncJobData,
   GmailPushJobData,
   IndexNoteJobData,
   InvokeAssistantJobData,

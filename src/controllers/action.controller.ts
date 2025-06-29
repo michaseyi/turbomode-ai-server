@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { apiUtils, controllerUtils, encryptionUtils } from '@/utils';
+import { apiUtils, controllerUtils } from '@/utils';
 import { z } from 'zod';
 import { actionValidation } from '@/validation';
 import { baseValidation } from '@/validation/base.validation';

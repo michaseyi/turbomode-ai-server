@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "npm run prisma:generate && tsup --format esm --dts --minify --sourcemap",
+    "start": "node dist/server/index.js",
     "dev": "NODE_ENV=development tsx src/server/index.ts",
     "worker": "NODE_ENV=development tsx src/worker/index.ts",
     "dev:watch": "nodemon",
@@ -48,6 +48,7 @@
     "nodemon": "^3.1.9",
     "prettier": "^3.5.3",
     "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.5.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"

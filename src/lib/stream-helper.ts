@@ -71,7 +71,7 @@ import { z } from 'zod';
 
 export async function getAgentStream(userId: string, actionId: string, signal: AbortSignal) {
   const streamKey = `stream:${userId}:${actionId}`;
-  const readerId = nanoid(5);
+  // const readerId = nanoid(5);
   const dup = redis.duplicate();
   // await dup.connect();
 

@@ -12,55 +12,55 @@ import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 import { config } from '@/config';
 import { baseTools, commonTools, googleTools, userTools } from '@/lib/tools';
 import { SystemMessage } from '@langchain/core/messages';
-import { DynamicTool, StructuredToolInterface, tool } from '@langchain/core/tools';
+import { DynamicTool, StructuredToolInterface } from '@langchain/core/tools';
 import { RunnableToolLike } from '@langchain/core/runnables';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ConfigurationSchema } from '../configuration';
 import { loggerUtils } from '@/utils';
 
-const messages = [
-  new SystemMessage(`
+// const messages = [
+//   new SystemMessage(`
 
-# System Prompt: Autonomous Email Assistant (AVA)
-## Core Directive: 
-You are to handle the user's incoming emails, identify actionable tasks, plan their execution, utilize available tools to complete them, and report on actions taken without any user interaction. You do not engage in conversation.
+// # System Prompt: Autonomous Email Assistant (AVA)
+// ## Core Directive: 
+// You are to handle the user's incoming emails, identify actionable tasks, plan their execution, utilize available tools to complete them, and report on actions taken without any user interaction. You do not engage in conversation.
 
-you must always log the actions you take and the descisions you make. This is important for accountability and transparency.
+// you must always log the actions you take and the descisions you make. This is important for accountability and transparency.
 
-before you use any tool, you must tell the user what you are going to do and why. This is important for transparency and accountability. Then you can proceed to call the tool in your next request.
+// before you use any tool, you must tell the user what you are going to do and why. This is important for transparency and accountability. Then you can proceed to call the tool in your next request.
 
-when you are done with all that needs to be done incldue the ##FINISHED## tag in the message
+// when you are done with all that needs to be done incldue the ##FINISHED## tag in the message
 
-you must walk the user through the steps you take as you are about to take them. This is important for transparency and accountability.
+// you must walk the user through the steps you take as you are about to take them. This is important for transparency and accountability.
 
-before you request a tool call, make sure you have previosully stated the intent to do so in the previous message. This is important for transparency and accountability. 
+// before you request a tool call, make sure you have previosully stated the intent to do so in the previous message. This is important for transparency and accountability. 
 
-    `),
-  new SystemMessage(`
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-Incoming Email Below
+//     `),
+//   new SystemMessage(`
+// ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+// Incoming Email Below
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+// ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Hi team,
+// Hi team,
 
-Just a reminder that we're gearing up for the product launch next week. Here are the key things that still need to be handled:
+// Just a reminder that we're gearing up for the product launch next week. Here are the key things that still need to be handled:
 
-Finalize the launch announcement email and schedule it.
+// Finalize the launch announcement email and schedule it.
 
-Prepare demo scripts and walkthrough materials for the sales team.
+// Prepare demo scripts and walkthrough materials for the sales team.
 
-Coordinate with the dev team to ensure the latest build is deployed to production by Monday.
+// Coordinate with the dev team to ensure the latest build is deployed to production by Monday.
 
-Schedule a dry-run meeting on Friday with marketing, sales, and product.
+// Schedule a dry-run meeting on Friday with marketing, sales, and product.
 
-Update the website banner with the correct launch date and feature highlights.
+// Update the website banner with the correct launch date and feature highlights.
 
-Let me know if you need help with anything.
-Thanks,
-Jane
-    `),
-];
+// Let me know if you need help with anything.
+// Thanks,
+// Jane
+//     `),
+// ];
 
 type CreateTurobModeAgentParams = {
   llm: BaseChatModel;
@@ -159,7 +159,7 @@ type createAssistantInstanceOptions = {
   model?: string;
 };
 
-export async function buildAssistant(options: createAssistantInstanceOptions) {
+export async function buildAssistant(_options: createAssistantInstanceOptions) {
   const checkpointer = PostgresSaver.fromConnString(config.database.url, {
     schema: 'agent',
   });
@@ -183,11 +183,11 @@ export async function buildAssistant(options: createAssistantInstanceOptions) {
     apiKey: config.env.GROQ_API_KEY,
   });
 
-  const agent = createAgent({
-    tools: [...Object.values(baseTools), ...Object.values(googleTools)],
-    llm: llm,
-    checkpointer,
-  });
+  // const agent = createAgent({
+  //   tools: [...Object.values(baseTools), ...Object.values(googleTools)],
+  //   llm: llm,
+  //   checkpointer,
+  // });
 
   const tools = [
     ...Object.values(baseTools),
