@@ -70,6 +70,7 @@ export async function startApp() {
     const server = serve({
       fetch: app.fetch,
       port: config.app.port,
+      hostname: '0.0.0.0',
     });
 
     setupGracefulShutdown(server);
