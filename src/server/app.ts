@@ -80,10 +80,3 @@ export async function startApp() {
     process.exit(1);
   }
 }
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startApp().catch(error => {
-    loggerUtils.error('unhandled error during server startup', error);
-    process.exit(1);
-  });
-}
