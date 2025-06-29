@@ -19,7 +19,12 @@ export const errorHandler: ErrorHandler = async (e: Error | HTTPException, c: Co
     return controllerUtils.createErrorResponse(c, message, status);
   }
 
-  const message = e instanceof Error ? e.message : messages.server.INTERNAL_ERROR;
+  const message =
+    env.NODE_ENV === 'production'
+      ? messages.server.INTERNAL_ERROR
+      : e instanceof Error
+        ? e.message
+        : messages.server.INTERNAL_ERROR;
   const errorDetails =
     env.NODE_ENV === 'development'
       ? {
